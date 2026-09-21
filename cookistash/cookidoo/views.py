@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 
 from cookistash.utils import parse_recipe_id
 
+from .client import CATEGORIES, CookidooClient
 from .models import Recipe, ScrapedRecipe, Source
 from .tasks import scrape_recipe, send_to_mealie
 
@@ -113,6 +114,62 @@ def recipe_detail(request, recipe_id):
         }
     )
     return render(request, "cookidoo/recipe_detail.html", context)
+
+
+def discover(request):
+    """POC: browse Cookidoo's own catalog by category and import from there,
+    instead of needing a recipe ID/link up front.
+    """
+    source = Source.objects.filter(is_default=True).first()
+    category = request.GET.get("category", "")
+    page = int(request.GET.get("page", 0))
+
+    results = []
+    fetch_error = None
+    if source:
+        try:
+            client = CookidooClient(source)
+            results = client.search(category=category or None, page=page, limit=24)
+        except Exception as e:
+            fetch_error = f"Couldn't fetch from Cookidoo: {e}"
+
+    known_ids = set(Recipe.objects.filter(id__in=[r["id"] for r in results]).values_list("id", flat=True))
+    for r in results:
+        r["already_scraped"] = r["id"] in known_ids
+
+    return render(
+        request,
+        "cookidoo/discover.html",
+        {
+            "categories": CATEGORIES,
+            "category": category,
+            "page": page,
+            "results": results,
+            "fetch_error": fetch_error,
+            "has_cookidoo_source": source is not None,
+        },
+    )
+
+
+@require_POST
+def discover_import(request, recipe_id):
+    """Import one recipe found via Discover, then bounce back to the same page/category."""
+    try:
+        scrape_recipe.apply(args=(recipe_id,)).get(disable_sync_subtasks=False)
+        messages.success(request, f"Scraped {recipe_id}.")
+    except Exception as e:
+        messages.error(request, f"Scrape of {recipe_id} failed: {e}")
+
+    category = request.POST.get("category", "")
+    page = request.POST.get("page", "0")
+    return discover(_with_get(request, category=category, page=page))
+
+
+def _with_get(request, **params):
+    request.GET = request.GET.copy()
+    for k, v in params.items():
+        request.GET[k] = v
+    return request
 
 
 @require_POST

@@ -6,6 +6,32 @@ from requests.exceptions import HTTPError
 
 logger = logging.getLogger(__name__)
 
+# Cookidoo's recipe category taxonomy - ids are stable across locales, only
+# the display title is localised server-side. Resolved once by hand (no
+# public "list categories" endpoint exists), titles are the English default.
+CATEGORIES = {
+    "VrkNavigationCategory-rpf-000001303095": "Menus and more",
+    "VrkNavCategory-RPF-019": "Breakfast",
+    "VrkNavCategory-RPF-018": "Sauces, dips and spreads - savoury",
+    "VrkNavCategory-RPF-017": "Baby food",
+    "VrkNavCategory-RPF-016": "Basics",
+    "VrkNavCategory-RPF-015": "Drinks",
+    "VrkNavCategory-RPF-014": "Breads and rolls",
+    "VrkNavCategory-RPF-013": "Baking - sweet",
+    "VrkNavCategory-RPF-012": "Baking - savoury",
+    "VrkNavCategory-RPF-011": "Desserts and sweets",
+    "VrkNavCategory-RPF-009": "Sauces, dips and spreads - sweet",
+    "VrkNavCategory-RPF-008": "Side dishes",
+    "VrkNavCategory-RPF-007": "Main dishes - other",
+    "VrkNavCategory-RPF-006": "Main dishes - vegetarian",
+    "VrkNavCategory-RPF-005": "Main dishes - fish and seafood",
+    "VrkNavCategory-RPF-004": "Main dishes - meat and poultry",
+    "VrkNavCategory-RPF-003": "Pasta and rice dishes",
+    "VrkNavCategory-RPF-002": "Soups",
+    "VrkNavCategory-RPF-001": "Starters and salads",
+    "VrkNavCategory-RPF-020": "Snacks and finger food",
+}
+
 
 class CookidooClient(Session):
     DEFAULT_HEADERS = {
@@ -44,6 +70,21 @@ class CookidooClient(Session):
     def get_recipe(self, recipe_id):
         req = self.request("GET", f"recipes/recipe/{self.locale}/{recipe_id}")
         return req.json(), req
+
+    def search(self, category=None, page=0, limit=24, sortby=None, rating=None):
+        """Search recipes for the Discover UI - a thin, paginated wrapper
+        around the same search endpoint get_country_recipes() uses in bulk.
+        Returns the raw list of result dicts (id, title, image, rating, totalTime, ...).
+        """
+        params = {"page": page, "limit": limit}
+        if category:
+            params["categories"] = category
+        if sortby:
+            params["sortby"] = sortby
+        if rating:
+            params["rating"] = rating
+        result = self.request("GET", f"search/{self.locale}", params=params)
+        return result.json()["data"]
 
     def get_country_recipes(self, country):
         """Retrieves all Recipe IDs for a country
@@ -116,27 +157,4 @@ class CookidooClient(Session):
         return {r["id"] for r in data["data"]}
 
     def _get_all_categories(self):
-        category_ids = [
-            "VrkNavigationCategory-rpf-000001303095",
-            "VrkNavCategory-RPF-019",
-            "VrkNavCategory-RPF-018",
-            "VrkNavCategory-RPF-017",
-            "VrkNavCategory-RPF-016",
-            "VrkNavCategory-RPF-015",
-            "VrkNavCategory-RPF-014",
-            "VrkNavCategory-RPF-013",
-            "VrkNavCategory-RPF-012",
-            "VrkNavCategory-RPF-011",
-            "VrkNavCategory-RPF-009",
-            "VrkNavCategory-RPF-008",
-            "VrkNavCategory-RPF-007",
-            "VrkNavCategory-RPF-006",
-            "VrkNavCategory-RPF-005",
-            "VrkNavCategory-RPF-004",
-            "VrkNavCategory-RPF-003",
-            "VrkNavCategory-RPF-002",
-            "VrkNavCategory-RPF-001",
-            "VrkNavCategory-RPF-020",
-        ]
-
-        return category_ids
+        return list(CATEGORIES.keys())
