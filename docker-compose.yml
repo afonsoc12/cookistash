@@ -1,0 +1,78 @@
+services:
+
+  postgres:
+    image: postgres:18-trixie
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./tmp/docker-data/postgres:/var/lib/postgresql
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    environment:
+      TZ: Europe/London
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./tmp/docker-data/redis:/data
+    command: --save 60 1
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:v3.3.2
+    container_name: mealie
+    ports:
+        - "9000:9000"
+    volumes:
+      - ./tmp/docker-data/mealie:/app/data
+    environment:
+      TZ: Europe/London
+      ALLOW_SIGNUP: "false"
+      PUID: 1000
+      PGID: 1000
+      DB_ENGINE: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: mealie
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build: .
+    container_name: cookistash_app
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Europe/London
+      DEBUG: "true"
+      ALLOWED_HOSTS: "*"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: cookistash
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: django-db
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./tmp/docker-data/app-logs:/var/log/supervisor

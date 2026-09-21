@@ -1,0 +1,350 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ recipe.name }} · Cookistash</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'cookidoo/img/favicon-32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'cookidoo/img/favicon-16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'cookidoo/img/apple-touch-icon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+        document.addEventListener('htmx:configRequest', (event) => {
+            event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+        });
+    </script>
+    <style>
+        :root {
+            --bg: #f6f5f2;
+            --card-bg: #ffffff;
+            --text: #211d1a;
+            --muted: #837a70;
+            --border: #ece7e0;
+            --primary: #e8590c;
+            --primary-dark: #c94a09;
+            --green: #1b7d4f;
+            --green-light: #e6f6ee;
+            --red: #c0392b;
+            --red-light: #fceeec;
+            --amber: #a06b00;
+            --amber-light: #fff6e0;
+            --radius: 14px;
+            --shadow: 0 1px 2px rgba(33,29,26,0.04), 0 8px 24px rgba(33,29,26,0.06);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 64px; }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 10;
+            background: rgba(246,245,242,0.85);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 18px 24px;
+        }
+        .topbar-inner { max-width: 1180px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
+        .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
+        .back-link, .admin-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 16px; border-radius: 999px;
+            background: var(--card-bg); border: 1px solid var(--border);
+            color: var(--text); text-decoration: none; font-weight: 600; font-size: 0.88rem;
+            transition: all 0.15s ease;
+        }
+        .back-link:hover, .admin-link:hover { border-color: var(--text); transform: translateY(-1px); box-shadow: var(--shadow); }
+        .topbar-actions { display: flex; gap: 10px; }
+
+        .banner {
+            margin: 20px 0 0; padding: 14px 18px; border-radius: 12px;
+            font-size: 0.92rem; font-weight: 500; display: flex; align-items: center; gap: 10px;
+        }
+        .banner-error { background: var(--red-light); color: var(--red); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 10px 16px; border-radius: 10px; border: none;
+            font-family: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+            transition: all 0.15s ease; white-space: nowrap;
+        }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-outline { background: var(--card-bg); color: var(--text); border: 1.5px solid var(--border); }
+        .btn-outline:hover:not(:disabled) { border-color: var(--text); transform: translateY(-1px); }
+        .btn-spinner {
+            width: 13px; height: 13px; border-radius: 50%;
+            border: 2px solid currentColor; border-top-color: transparent;
+            animation: spin 0.7s linear infinite; opacity: 0.7;
+        }
+        .htmx-indicator { display: none; }
+        .htmx-request.htmx-indicator, .htmx-request .htmx-indicator { display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .pill {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 999px;
+            font-size: 0.72rem; font-weight: 700; text-decoration: none;
+        }
+        .pill-success { background: var(--green-light); color: var(--green); }
+        .pill-failed { background: var(--red-light); color: var(--red); }
+        .pill-pending, .pill-in_progress { background: var(--amber-light); color: var(--amber); }
+        .pill-muted { background: var(--border); color: var(--muted); }
+
+        /* Hero */
+        .hero {
+            display: grid; grid-template-columns: 220px 1fr; gap: 24px;
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 20px; margin-top: 24px;
+        }
+        @media (max-width: 700px) { .hero { grid-template-columns: 1fr; } }
+        .hero-image { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 10px; background: var(--bg); }
+        .hero-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px; }
+        .hero-link { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+        .hero-link:hover { color: var(--primary); }
+        .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+        .hero-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; font-size: 0.85rem; color: var(--muted); }
+        .hero-meta strong { color: var(--text); font-weight: 700; }
+        .hero-actions { display: flex; gap: 10px; margin-top: 16px; }
+
+        /* Sections */
+        .section {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 20px; margin-top: 20px;
+        }
+        .section-title { font-size: 0.95rem; font-weight: 800; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+        .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tag-chip { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+        .ingredient-list { list-style: none; margin: 0; padding: 0; }
+        .ingredient-list li {
+            display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+        .ingredient-list li:last-child { border-bottom: none; }
+        .ing-qty { color: var(--primary); font-weight: 700; min-width: 70px; }
+        .ing-group-header { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 14px 0 4px; }
+        .ing-group-header:first-child { margin-top: 0; }
+
+        .instruction-list { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+        .instruction-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .instruction-item:last-child { border-bottom: none; }
+        .instruction-num {
+            counter-increment: step; flex-shrink: 0;
+            width: 28px; height: 28px; border-radius: 50%; background: var(--primary-dark);
+            color: white; font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .instruction-num::before { content: counter(step); }
+        .instruction-text { font-size: 0.9rem; line-height: 1.5; }
+        .instruction-group-header { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 16px 0 4px; }
+        .instruction-group-header:first-child { margin-top: 0; }
+
+        .nutrition-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; }
+        .nutrition-stat { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+        .nutrition-stat .value { font-size: 1.1rem; font-weight: 800; }
+        .nutrition-stat .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+        .note-item { background: var(--bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+        .note-item:last-child { margin-bottom: 0; }
+        .note-title { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+
+        .empty-note { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+
+        /* Raw JSON */
+        details.json-viewer summary {
+            cursor: pointer; font-weight: 700; font-size: 0.95rem; padding: 4px 0;
+            display: flex; align-items: center; gap: 8px; list-style: none;
+        }
+        details.json-viewer summary::-webkit-details-marker { display: none; }
+        details.json-viewer summary::before { content: '▶'; font-size: 0.7rem; transition: transform 0.15s ease; }
+        details.json-viewer[open] summary::before { transform: rotate(90deg); }
+        .json-box {
+            background: #1e1b18; color: #e8e2da; border-radius: 10px; padding: 16px;
+            margin-top: 12px; max-height: 600px; overflow: auto;
+            font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8rem; line-height: 1.5;
+            white-space: pre-wrap; word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-inner">
+            <div class="brand"><img class="brand-icon" src="{% static 'cookidoo/img/icon.png' %}" alt="Cookistash"> Cookistash</div>
+            <div class="topbar-actions">
+                <a href="{% url 'cookidoo:recipe_list' %}" class="back-link">← Back</a>
+                <a href="/flower/" class="admin-link" target="_blank" rel="noopener">🌸 Celery →</a>
+                <a href="/admin/" class="admin-link">⚙ Admin →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="wrap">
+        {% if action_error %}
+            <div class="banner banner-error">✕ {{ action_error }}</div>
+        {% endif %}
+
+        <div class="hero" id="recipe-hero">
+            {% if recipe.image_url %}
+                <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="hero-image">
+            {% endif %}
+            <div>
+                <h1 class="hero-title">{{ recipe.name }}</h1>
+                <a href="{{ recipe.url }}" target="_blank" class="hero-link">{{ recipe.id }} on Cookidoo ↗</a>
+
+                <div class="hero-pills">
+                    <span class="pill pill-{{ recipe.scrape_status }}">{{ recipe.get_scrape_status_display }}</span>
+                    {% if mealie_recipe %}
+                        {% if mealie_recipe_url %}
+                            <a href="{{ mealie_recipe_url }}" target="_blank" class="pill pill-success">✓ synced to Mealie ↗</a>
+                        {% else %}
+                            <span class="pill pill-success">✓ synced to Mealie</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="pill pill-muted">not synced</span>
+                    {% endif %}
+                </div>
+
+                <div class="hero-meta">
+                    <span>🕓 last scraped <strong>{{ recipe.last_scraped_at|default:"never" }}</strong></span>
+                    {% if mealie_recipe.last_synced_at %}<span>🔗 last synced <strong>{{ mealie_recipe.last_synced_at }}</strong></span>{% endif %}
+                    {% if mealie_recipe %}<span>servings <strong>{{ mealie_recipe.recipe_servings|default:"—" }} {{ mealie_recipe.recipe_yield }}</strong></span>{% endif %}
+                    {% if mealie_recipe.total_time %}<span>⏱ total <strong>{{ mealie_recipe.total_time }}</strong></span>{% endif %}
+                    {% if mealie_recipe.prep_time %}<span>prep <strong>{{ mealie_recipe.prep_time }}</strong></span>{% endif %}
+                </div>
+
+                <div class="hero-actions">
+                    <button
+                        class="btn btn-outline"
+                        hx-post="{% url 'cookidoo:recipe_rescrape' recipe.id %}"
+                        hx-target="body" hx-swap="innerHTML"
+                        hx-indicator="#hero-spinner-1">
+                        <span class="btn-spinner htmx-indicator" id="hero-spinner-1"></span>
+                        ↻ Re-scrape
+                    </button>
+                    <button
+                        class="btn btn-primary"
+                        hx-post="{% url 'cookidoo:recipe_send_to_mealie' recipe.id %}"
+                        hx-target="body" hx-swap="innerHTML"
+                        hx-indicator="#hero-spinner-2"
+                        {% if not latest_scrape or not latest_scrape.success %}disabled{% endif %}>
+                        <span class="btn-spinner htmx-indicator" id="hero-spinner-2"></span>
+                        → Send to Mealie
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% if mealie_recipe %}
+            <div class="two-col">
+                <div class="section">
+                    <p class="section-title">🥕 Ingredients ({{ ingredients|length }})</p>
+                    {% if ingredients %}
+                        <ul class="ingredient-list">
+                            {% regroup ingredients by title as ingredient_groups %}
+                            {% for group in ingredient_groups %}
+                                {% if group.grouper %}<li class="ing-group-header">{{ group.grouper }}</li>{% endif %}
+                                {% for ing in group.list %}
+                                    <li>
+                                        <span class="ing-qty">{{ ing.quantity|default:"" }} {% if ing.unit %}{{ ing.unit.abbreviation|default:ing.unit.name }}{% endif %}</span>
+                                        <span>{{ ing.food.name|default:"" }}{% if ing.note %} <em>({{ ing.note }})</em>{% endif %}</span>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-note">No ingredients parsed.</p>
+                    {% endif %}
+                </div>
+
+                <div class="section">
+                    <p class="section-title">📋 Instructions ({{ instructions|length }})</p>
+                    {% if instructions %}
+                        <ol class="instruction-list">
+                            {% regroup instructions by title as instruction_groups %}
+                            {% for group in instruction_groups %}
+                                {% if group.grouper %}<li class="instruction-group-header">{{ group.grouper }}</li>{% endif %}
+                                {% for step in group.list %}
+                                    <li class="instruction-item">
+                                        <span class="instruction-num"></span>
+                                        <span class="instruction-text">{{ step.formatted_text|safe }}</span>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="empty-note">No instructions parsed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="section">
+                    <p class="section-title">🏷 Categories, tags & tools</p>
+                    <p class="ing-group-header" style="margin-top:0;">Categories</p>
+                    <div class="tag-row">
+                        {% for c in mealie_recipe.recipe_category %}<span class="tag-chip">{{ c.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                    <p class="ing-group-header">Tags</p>
+                    <div class="tag-row">
+                        {% for t in mealie_recipe.tags %}<span class="tag-chip">{{ t.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                    <p class="ing-group-header">Tools</p>
+                    <div class="tag-row">
+                        {% for t in mealie_recipe.tools %}<span class="tag-chip">{{ t.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="section">
+                    <p class="section-title">📝 Notes</p>
+                    {% for note in mealie_recipe.notes %}
+                        <div class="note-item">
+                            {% if note.title %}<div class="note-title">{{ note.title }}</div>{% endif %}
+                            {{ note.text }}
+                        </div>
+                    {% empty %}
+                        <p class="empty-note">No notes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if nutrition_items %}
+                <div class="section">
+                    <p class="section-title">🔥 Nutrition (per serving)</p>
+                    <div class="nutrition-grid">
+                        {% for item in nutrition_items %}
+                            <div class="nutrition-stat">
+                                <div class="value">{{ item.value }}{% if item.unit %} <small>{{ item.unit }}</small>{% endif %}</div>
+                                <div class="label">{{ item.label }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="section">
+                <p class="empty-note">Not synced to Mealie yet — parsed ingredients/instructions/nutrition will show here once it is.</p>
+            </div>
+        {% endif %}
+
+        <div class="section">
+            <details class="json-viewer">
+                <summary>🔍 Raw scraped JSON{% if not raw_json %} (no successful scrape yet){% endif %}</summary>
+                {% if raw_json %}<div class="json-box">{{ raw_json }}</div>{% endif %}
+            </details>
+        </div>
+    </div>
+</body>
+</html>

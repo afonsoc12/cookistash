@@ -1,0 +1,8 @@
+.venv
+tmp/
+tests_old/
+data/
+.git/
+.DS_Store
+__pycache__/
+*.pyc
