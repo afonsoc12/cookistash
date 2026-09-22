@@ -163,5 +163,8 @@ Temporary Items
 # docker-compose bind-mounted service data (postgres/redis/mealie)
 tmp/
 
+# collectstatic output (gunicorn/nginx path only, regenerated on container start)
+/staticfiles/
+
 # Claude Code local settings
 .claude/

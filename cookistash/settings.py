@@ -144,6 +144,10 @@ DATETIME_FORMAT = "N j"
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+# Only used by `collectstatic` for the gunicorn/nginx path (docker-compose) -
+# `manage.py runserver` (local dev) serves straight from each app's static/
+# dir via django.contrib.staticfiles and never touches this.
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

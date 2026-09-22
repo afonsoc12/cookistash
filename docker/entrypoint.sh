@@ -24,4 +24,7 @@ echo "Running migrations..."
 echo "Syncing Cookidoo source..."
 /app/.venv/bin/python manage.py sync_cookidoo_source
 
+echo "Collecting static files..."
+/app/.venv/bin/python manage.py collectstatic --noinput
+
 exec "$@"

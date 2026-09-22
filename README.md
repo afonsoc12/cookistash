@@ -76,6 +76,8 @@ Managed via django-celery-beat — DB-backed, editable at `/admin/django_celery_
 
 Multi-stage build, Alpine + Python 3.14. `psycopg2` compiles from source in the builder stage (no musllinux wheel available) and never ships in the runtime image. ~115 MB total.
 
+The `app` container runs [gunicorn](https://gunicorn.org/) (not `manage.py runserver`) behind nginx, which also serves `/static/` directly from `collectstatic` output rather than round-tripping every asset through Django:
+
 ```
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
@@ -83,8 +85,24 @@ CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf", "-n"]
 
 ## 🛠️ Development
 
+Two ways to run it, pick whichever suits what you're doing:
+
+**Full stack via Docker** — closest to how it actually runs, but no hot reload:
 ```bash
-uv sync --all-groups   # install app + dev deps (ruff, mypy, pytest-cov, pytest-bdd)
+docker compose up --build -d
+```
+
+**Django's dev server against dockerized Postgres/Redis** — hot reload, faster iteration on Python/template changes:
+```bash
+docker compose up -d postgres redis   # just the backing services
+uv sync --all-groups                  # install app + dev deps (ruff, mypy, pytest-cov, pytest-bdd)
+uv run python manage.py migrate
+uv run python manage.py sync_cookidoo_source   # if COOKIDOO_EXPLORE_URL is set
+uv run python manage.py runserver
+```
+`DB_HOST`/`CELERY_BROKER_URL` already default to `localhost`, matching the ports docker-compose exposes, so no extra env vars are needed for this path.
+
+```bash
 uv run ruff format     # format
 uv run ruff check      # lint
 uv run mypy cookistash/
