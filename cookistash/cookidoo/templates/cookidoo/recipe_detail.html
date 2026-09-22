@@ -178,9 +178,11 @@
             white-space: pre-wrap; word-break: break-word;
         }
 
-        .footer { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
+        .footer { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
         .footer a { color: var(--muted); text-decoration: none; font-weight: 600; }
         .footer a:hover { color: var(--primary); text-decoration: underline; }
+        .footer-made { grid-column: 2; text-align: center; }
+        .footer-version { grid-column: 3; text-align: right; }
     </style>
 </head>
 <body>
@@ -352,7 +354,9 @@
         </div>
 
         <div class="footer">
-            <a href="https://github.com/afonsoc12/cookistash">Cookistash</a>{% if app_version %}@<a href="{{ app_release_url }}">v{{ app_version }}</a>{% endif %}
+            <span></span>
+            <span class="footer-made">Made with 🤖 by <a href="https://github.com/afonsoc12">Afonso Costa</a></span>
+            <span class="footer-version">{% if app_version %}<a href="{{ app_release_url }}">v{{ app_version }}</a>{% endif %}</span>
         </div>
     </div>
 </body>
