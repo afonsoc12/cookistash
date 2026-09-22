@@ -32,6 +32,37 @@ CATEGORIES = {
     "VrkNavCategory-RPF-020": "Snacks and finger food",
 }
 
+# Known Thermomix/Cookidoo markets (lowercase ISO 3166-1 alpha-2). Not
+# necessarily exhaustive - there's no public "list countries" endpoint
+# either, this is the common set Vorwerk sells Cookidoo/Thermomix in.
+COUNTRIES = {
+    "gb": "United Kingdom",
+    "pt": "Portugal",
+    "de": "Germany",
+    "at": "Austria",
+    "ch": "Switzerland",
+    "fr": "France",
+    "es": "Spain",
+    "it": "Italy",
+    "nl": "Netherlands",
+    "be": "Belgium",
+    "pl": "Poland",
+    "se": "Sweden",
+    "no": "Norway",
+    "dk": "Denmark",
+    "fi": "Finland",
+    "ie": "Ireland",
+    "us": "United States",
+    "ca": "Canada",
+    "au": "Australia",
+    "nz": "New Zealand",
+    "za": "South Africa",
+}
+
+# Transformation preset used for every Cookidoo image asset URL - these are
+# templated as "{transformation}/..." and 404 unless filled in.
+IMAGE_TRANSFORMATION = "t_web_rdp_recipe_584x480_1_5x"
+
 
 class CookidooClient(Session):
     DEFAULT_HEADERS = {
@@ -71,20 +102,27 @@ class CookidooClient(Session):
         req = self.request("GET", f"recipes/recipe/{self.locale}/{recipe_id}")
         return req.json(), req
 
-    def search(self, category=None, page=0, limit=24, sortby=None, rating=None):
+    def search(self, category=None, country=None, page=0, limit=24, sortby=None, rating=None):
         """Search recipes for the Discover UI - a thin, paginated wrapper
         around the same search endpoint get_country_recipes() uses in bulk.
-        Returns the raw list of result dicts (id, title, image, rating, totalTime, ...).
+        Returns the raw list of result dicts (id, title, image, rating, totalTime, ...),
+        with the "{transformation}" placeholder in image URLs filled in.
         """
         params = {"page": page, "limit": limit}
         if category:
             params["categories"] = category
+        if country:
+            params["countries"] = country
         if sortby:
             params["sortby"] = sortby
         if rating:
             params["rating"] = rating
         result = self.request("GET", f"search/{self.locale}", params=params)
-        return result.json()["data"]
+        results = result.json()["data"]
+        for r in results:
+            if r.get("image"):
+                r["image"] = r["image"].format(transformation=IMAGE_TRANSFORMATION)
+        return results
 
     def get_country_recipes(self, country):
         """Retrieves all Recipe IDs for a country

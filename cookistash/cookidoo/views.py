@@ -8,7 +8,7 @@ from django.views.decorators.http import require_POST
 
 from cookistash.utils import parse_recipe_id
 
-from .client import CATEGORIES, CookidooClient
+from .client import CATEGORIES, COUNTRIES, CookidooClient
 from .models import Recipe, ScrapedRecipe, Source
 from .tasks import scrape_recipe, send_to_mealie
 
@@ -122,6 +122,7 @@ def discover(request):
     """
     source = Source.objects.filter(is_default=True).first()
     category = request.GET.get("category", "")
+    country = request.GET.get("country", "")
     page = int(request.GET.get("page", 0))
 
     results = []
@@ -129,20 +130,24 @@ def discover(request):
     if source:
         try:
             client = CookidooClient(source)
-            results = client.search(category=category or None, page=page, limit=24)
+            results = client.search(category=category or None, country=country or None, page=page, limit=24)
         except Exception as e:
             fetch_error = f"Couldn't fetch from Cookidoo: {e}"
 
     known_ids = set(Recipe.objects.filter(id__in=[r["id"] for r in results]).values_list("id", flat=True))
     for r in results:
         r["already_scraped"] = r["id"] in known_ids
+        if source:
+            r["cookidoo_url"] = f"{source.url}recipes/recipe/{source.locale}/{r['id']}"
 
     return render(
         request,
         "cookidoo/discover.html",
         {
             "categories": CATEGORIES,
+            "countries": COUNTRIES,
             "category": category,
+            "country": country,
             "page": page,
             "results": results,
             "fetch_error": fetch_error,
@@ -161,8 +166,9 @@ def discover_import(request, recipe_id):
         messages.error(request, f"Scrape of {recipe_id} failed: {e}")
 
     category = request.POST.get("category", "")
+    country = request.POST.get("country", "")
     page = request.POST.get("page", "0")
-    return discover(_with_get(request, category=category, page=page))
+    return discover(_with_get(request, category=category, country=country, page=page))
 
 
 def _with_get(request, **params):

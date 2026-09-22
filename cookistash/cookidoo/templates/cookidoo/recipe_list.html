@@ -55,9 +55,14 @@
             padding: 18px 24px;
             display: flex; align-items: center; justify-content: space-between;
         }
-        .topbar-inner { max-width: 1180px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+        .topbar-inner { max-width: 1180px; margin: 0 auto; width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 16px; }
         .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.3rem; letter-spacing: -0.02em; }
         .brand-icon { width: 32px; height: 32px; border-radius: 8px; }
+        .nav-tabs { justify-self: center; display: flex; gap: 4px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
+        .nav-tab { padding: 8px 20px; border-radius: 999px; text-decoration: none; color: var(--muted); font-weight: 700; font-size: 0.88rem; transition: all 0.15s ease; }
+        .nav-tab:hover { color: var(--text); }
+        .nav-tab.active { background: var(--primary); color: white; }
+        .topbar-actions-right { justify-self: end; display: flex; gap: 10px; }
         .admin-link {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 9px 16px; border-radius: 999px;
@@ -189,8 +194,11 @@
     <div class="topbar">
         <div class="topbar-inner">
             <div class="brand"><img class="brand-icon" src="{% static 'cookidoo/img/icon.png' %}" alt="Cookistash"> Cookistash</div>
-            <div style="display: flex; gap: 10px;">
-                <a href="{% url 'cookidoo:discover' %}" class="admin-link">🧭 Discover</a>
+            <nav class="nav-tabs">
+                <a href="{% url 'cookidoo:recipe_list' %}" class="nav-tab active">🥘 Recipes</a>
+                <a href="{% url 'cookidoo:discover' %}" class="nav-tab">🧭 Discover</a>
+            </nav>
+            <div class="topbar-actions-right">
                 <a href="/flower/" class="admin-link" target="_blank" rel="noopener">🌸 Celery →</a>
                 <a href="/admin/" class="admin-link">⚙ Admin →</a>
             </div>
