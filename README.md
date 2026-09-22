@@ -4,7 +4,8 @@
 
 # Cookistash
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/ci.yml?label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/ci.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/release.yml)
+[![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
 
 > 🥘 Scrapes recipes from [Cookidoo](https://cookidoo.thermomix.com/) (Bimby/Thermomix) — with optional sync to [Mealie](https://mealie.io/).
 
@@ -97,9 +98,16 @@ Requires a reachable Postgres (`DB_HOST=localhost DB_NAME=cookistash` works agai
 
 `tests/e2e/` runs the real scrape → transform → sync pipeline (pytest-bdd/Gherkin) against live docker-compose services — see `tests/e2e/README.md`. Excluded from the default run and from CI; run explicitly with `-m e2e`.
 
-## 🔁 CI
+## 🔁 CI & Releases
 
-`.github/workflows/ci.yml` runs ruff (format + lint), mypy, the unit test suite with coverage (uploaded as a build artifact), and builds the Docker image. e2e tests are skipped (they need live services CI doesn't spin up).
+`.github/workflows/ci.yml` runs ruff (format + lint), mypy, and the unit test suite with coverage (uploaded as a build artifact). e2e tests are skipped (they need live services CI doesn't spin up).
+
+`.github/workflows/release.yml` runs CI, then builds/pushes a Docker image on every push to `master`:
+
+- Plain pushes → `ghcr.io/afonsoc12/cookistash:dev-{version}+{7-char sha}` and a rolling `:dev` tag
+- Pushing a `vX.Y.Z` tag → `ghcr.io/afonsoc12/cookistash:{version}` + `:latest`, plus a GitHub Release with notes pulled from `CHANGELOG.md`
+
+To cut a release: bump the version with `uv version --bump patch|minor|major`, move `CHANGELOG.md`'s `[Unreleased]` section to `[X.Y.Z] - <date>`, commit, then tag and push (`git tag vX.Y.Z && git push --tags`).
 
 ## 🗺️ Roadmap
 

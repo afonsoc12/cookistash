@@ -1,6 +1,6 @@
 [project]
 name = "cookistash"
-version = "0.1.0"
+version = "0.0.1"
 description = "Scrapes Cookidoo (Bimby/Thermomix) recipes; optionally syncs them to Mealie when configured"
 readme = "README.md"
 requires-python = ">=3.14,<3.15"
@@ -51,6 +51,7 @@ source = ["cookistash"]
 omit = ["*/migrations/*", "*/tests/*"]
 
 [tool.coverage.report]
+fail_under = 90
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
@@ -91,3 +92,7 @@ exclude = ["migrations/"]
 
 [tool.django-stubs]
 django_settings_module = "cookistash.settings"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

@@ -177,6 +177,10 @@
         .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 36px; font-size: 0.85rem; color: var(--muted); }
         .pagination a { color: var(--primary); text-decoration: none; font-weight: 600; }
         .pagination a:hover { text-decoration: underline; }
+
+        .footer { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--muted); }
+        .footer a { color: var(--muted); text-decoration: none; font-weight: 600; }
+        .footer a:hover { color: var(--primary); text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -244,6 +248,10 @@
                 {% if page.has_next %}<a href="?q={{ query }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
             </div>
         {% endif %}
+
+        <div class="footer">
+            <a href="https://github.com/afonsoc12/cookistash">Cookistash</a>{% if app_version %}@<a href="{{ app_release_url }}">v{{ app_version }}</a>{% endif %}
+        </div>
     </div>
 </body>
 </html>
