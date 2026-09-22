@@ -165,6 +165,13 @@ CELERY_TIMEZONE = TIME_ZONE
 # kwargs/worker populated, only status/result, making the admin useless for
 # figuring out which recipe a task result belongs to.
 CELERY_RESULT_EXTENDED = True
+# The UI dispatches tasks with .apply() (runs in-process, blocks for the
+# result - see views.py) rather than .delay(), so Celery treats it as
+# "eager" execution. Eager results aren't written to the result backend by
+# default (this setting defaults to False) - the task still fully runs
+# either way, but without this its TaskResult row stays stuck at PENDING
+# with no status/result/worker, even after the task succeeded.
+CELERY_TASK_STORE_EAGER_RESULT = True
 
 # Periodic tasks are managed via django-celery-beat (DB-backed schedules,
 # editable at /admin/django_celery_beat/periodictask/) instead of the static

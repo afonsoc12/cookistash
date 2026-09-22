@@ -18,9 +18,12 @@ def _hash_data(data: dict) -> str:
 
 
 @shared_task(bind=True)
-def scrape_recipe(self, recipe_id: str, source: Source | None = None):
-    if source is None:
-        source = Source.objects.get()
+def scrape_recipe(self, recipe_id: str):
+    # Source is a strict singleton (see cookidoo.Source.save()) - there is
+    # only ever one to use. It's fetched here rather than accepted as a
+    # parameter because a Django model instance isn't JSON-serializable,
+    # which would break a real (non-eager) Celery dispatch.
+    source = Source.objects.get()
 
     recipe, _ = Recipe.objects.get_or_create(
         id=recipe_id,
@@ -78,13 +81,13 @@ def scrape_recipe(self, recipe_id: str, source: Source | None = None):
 
 
 @shared_task
-def rescrape_recipe(recipe_id: str, source: Source | None = None, sync_to_mealie: bool = False):
+def rescrape_recipe(recipe_id: str, sync_to_mealie: bool = False):
     """Force a fresh scrape of an existing recipe.
 
     If sync_to_mealie is True and the recipe was previously synced, also push
     the refreshed content to Mealie (a no-op if the content hasn't changed).
     """
-    result = scrape_recipe.apply(args=(recipe_id, source)).get(disable_sync_subtasks=False)
+    result = scrape_recipe.apply(args=(recipe_id,)).get(disable_sync_subtasks=False)
     if sync_to_mealie:
         from cookistash.mealie.models import Recipe as MealieRecipe
 

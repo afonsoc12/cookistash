@@ -49,13 +49,14 @@ class TestScrapeRecipe:
 
         with patch("cookistash.cookidoo.tasks.CookidooClient") as MockClient:
             MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            result = scrape_recipe.apply(args=("r123", source)).get(disable_sync_subtasks=False)
+            result = scrape_recipe.apply(args=("r123",)).get(disable_sync_subtasks=False)
 
         recipe = Recipe.objects.get(id="r123")
         assert recipe.name == "Gazpacho"
         assert recipe.scrape_status == "success"
         assert recipe.scrape_error is None
         assert recipe.last_scraped_at is not None
+        assert recipe.source == source
 
         scrape = ScrapedRecipe.objects.get(scrape_id=result)
         assert scrape.success is True
@@ -63,21 +64,11 @@ class TestScrapeRecipe:
         assert scrape.content_hash == _hash_data(data)
         assert scrape.celery_task is not None
 
-    def test_uses_default_source_when_none_given(self, source):
-        data = _fake_recipe_data()
-        fake_response = MagicMock(url="https://example.com/x")
-        with patch("cookistash.cookidoo.tasks.CookidooClient") as MockClient:
-            MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            scrape_recipe.apply(args=("r123",)).get(disable_sync_subtasks=False)
-
-        recipe = Recipe.objects.get(id="r123")
-        assert recipe.source == source
-
     def test_failure_marks_recipe_failed_and_reraises(self, source):
         with patch("cookistash.cookidoo.tasks.CookidooClient") as MockClient:
             MockClient.return_value.get_recipe.side_effect = RuntimeError("network broke")
             with pytest.raises(RuntimeError, match="network broke"):
-                scrape_recipe.apply(args=("r123", source)).get(disable_sync_subtasks=False)
+                scrape_recipe.apply(args=("r123",)).get(disable_sync_subtasks=False)
 
         recipe = Recipe.objects.get(id="r123")
         assert recipe.scrape_status == "failed"
@@ -93,7 +84,7 @@ class TestRescrapeRecipe:
         fake_response = MagicMock(url="https://example.com/x")
         with patch("cookistash.cookidoo.tasks.CookidooClient") as MockClient:
             MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            rescrape_recipe.apply(args=("r123", source, False)).get(disable_sync_subtasks=False)
+            rescrape_recipe.apply(args=("r123", False)).get(disable_sync_subtasks=False)
 
         assert Recipe.objects.filter(id="r123", scrape_status="success").exists()
 
@@ -105,7 +96,7 @@ class TestRescrapeRecipe:
         fake_response = MagicMock(url="https://example.com/x")
         with patch("cookistash.cookidoo.tasks.CookidooClient") as MockClient:
             MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            scrape_recipe.apply(args=("r123", source)).get(disable_sync_subtasks=False)
+            scrape_recipe.apply(args=("r123",)).get(disable_sync_subtasks=False)
 
         recipe = Recipe.objects.get(id="r123")
         scrape = ScrapedRecipe.objects.get(recipe=recipe)
@@ -117,7 +108,7 @@ class TestRescrapeRecipe:
             patch("cookistash.cookidoo.tasks.send_to_mealie.apply") as mock_send_apply,
         ):
             MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            rescrape_recipe.apply(args=("r123", source, True)).get(disable_sync_subtasks=False)
+            rescrape_recipe.apply(args=("r123", True)).get(disable_sync_subtasks=False)
 
         mock_send_apply.assert_called_once_with(args=("r123",))
         assert mealie_source  # keep reference alive for clarity
@@ -130,7 +121,7 @@ class TestRescrapeRecipe:
             patch("cookistash.cookidoo.tasks.send_to_mealie.apply") as mock_send_apply,
         ):
             MockClient.return_value.get_recipe.return_value = (data, fake_response)
-            rescrape_recipe.apply(args=("r123", source, True)).get(disable_sync_subtasks=False)
+            rescrape_recipe.apply(args=("r123", True)).get(disable_sync_subtasks=False)
 
         mock_send_apply.assert_not_called()
 
