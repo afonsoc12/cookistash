@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning].
 - 🌍 Cookidoo source auto-configured from `COOKIDOO_EXPLORE_URL` (domain + locale parsed from the market's own explore URL) — single-source only, since each Cookidoo market is a separate domain/API
 - 🔗 Mealie source likewise auto-configured from `MEALIE_API_URL`/`MEALIE_API_TOKEN` (+ optional `MEALIE_PUBLIC_URL`/`MEALIE_GROUP_SLUG`), single-source only, re-syncs on every container start if the env vars change
 - 🖥️ Explorer UI — recipe grid with scrape/sync status, re-scrape and send-to-Mealie actions, raw JSON viewer
-- 🎨 Django admin re-themed with Unfold; task results and periodic tasks linked back to their recipe
+- 🎨 Django admin re-themed with Unfold, using the app's own orange accent and icon, with a "Back to Cookistash" link; task results and periodic tasks linked back to their recipe
 - 🌸 Flower (Celery monitoring) served under the same origin via nginx, linked from the UI
 - 🐳 Single container (Django + Celery worker + beat + Flower + nginx via supervisord), Alpine + Python 3.14
 

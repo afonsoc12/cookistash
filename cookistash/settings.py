@@ -55,6 +55,32 @@ INSTALLED_APPS = [
 UNFOLD = {
     "SITE_TITLE": "Cookistash",
     "SITE_HEADER": "Cookistash Admin",
+    "SITE_ICON": lambda request: "/static/cookidoo/img/icon.png",
+    "SITE_URL": "/",
+    "SITE_DROPDOWN": [
+        {
+            "icon": "arrow_back",
+            "title": "Back to Cookistash",
+            "link": "/",
+        },
+    ],
+    # Matches the orange accent used across the app's own UI
+    # (--primary: #e8590c in the templates' shared stylesheet).
+    "COLORS": {
+        "primary": {
+            "50": "#fff8f3",
+            "100": "#fff1e8",
+            "200": "#ffddc2",
+            "300": "#ffc088",
+            "400": "#ff9d52",
+            "500": "#e8590c",
+            "600": "#c94a09",
+            "700": "#a83c08",
+            "800": "#863006",
+            "900": "#6b2705",
+            "950": "#3d1603",
+        },
+    },
 }
 
 MIDDLEWARE = [
