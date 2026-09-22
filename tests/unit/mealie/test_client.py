@@ -90,6 +90,16 @@ class TestFindByName:
             result = mealie_client._find_by_name("foods", "Salt")
         assert result is None
 
+    def test_match_is_case_insensitive(self, mealie_client):
+        # Mealie's own uniqueness constraint on these names is case-insensitive
+        # (POSTing "vegetarian" when "Vegetarian" exists 500s rather than
+        # 409ing) - the fallback lookup has to match the same way or it'll
+        # never find the row that caused the conflict in the first place.
+        with patch.object(mealie_client, "_request") as mock_request:
+            mock_request.return_value.json.return_value = {"items": [{"name": "Vegetarian"}]}
+            result = mealie_client._find_by_name("organizers/tags", "vegetarian")
+        assert result == {"name": "Vegetarian"}
+
 
 class TestCreateFood:
     def test_creates_and_stores_mealie_id(self, mealie_client):

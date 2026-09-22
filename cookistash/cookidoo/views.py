@@ -6,7 +6,7 @@ from django.db import models
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_POST
 
-from cookistash.utils import parse_recipe_id
+from cookistash.utils import friendly_error, parse_recipe_id
 
 from .client import CATEGORIES, COUNTRIES, CookidooClient
 from .models import Recipe, ScrapedRecipe, Source
@@ -153,7 +153,7 @@ def discover(request):
                 category=category or None, country=country or None, query=query or None, page=page, limit=24
             )
         except Exception as e:
-            fetch_error = f"Couldn't fetch from Cookidoo: {e}"
+            fetch_error = friendly_error("Couldn't fetch from Cookidoo", e)
 
     known_ids = set(Recipe.objects.filter(id__in=[r["id"] for r in results]).values_list("id", flat=True))
     for r in results:
@@ -186,7 +186,7 @@ def discover_import(request, recipe_id):
         scrape_recipe.apply(args=(recipe_id,)).get(disable_sync_subtasks=False)
         messages.success(request, f"Scraped {recipe_id}.")
     except Exception as e:
-        messages.error(request, f"Scrape of {recipe_id} failed: {e}")
+        messages.error(request, friendly_error(f"Scrape of {recipe_id}", e))
 
     category = request.POST.get("category", "")
     country = request.POST.get("country", "")
@@ -222,7 +222,7 @@ def recipe_scrape_new(request):
             scrape_recipe.apply(args=(recipe_id,)).get(disable_sync_subtasks=False)
             messages.success(request, f"Scraped {recipe_id}.")
         except Exception as e:
-            messages.error(request, f"Scrape of {recipe_id} failed: {e}")
+            messages.error(request, friendly_error(f"Scrape of {recipe_id}", e))
     return recipe_list(request)
 
 
@@ -233,7 +233,7 @@ def recipe_rescrape(request, recipe_id):
     try:
         scrape_recipe.apply(args=(recipe.id,)).get(disable_sync_subtasks=False)
     except Exception as e:
-        action_error = f"Re-scrape failed: {e}"
+        action_error = friendly_error("Re-scrape", e)
     recipe.refresh_from_db()
     return render(request, "cookidoo/_recipe_card.html", _recipe_context(recipe, action_error))
 
@@ -250,5 +250,5 @@ def recipe_send_to_mealie(request, recipe_id):
         try:
             send_to_mealie.apply(args=(recipe.id,), kwargs={"force": True}).get(disable_sync_subtasks=False)
         except Exception as e:
-            action_error = f"Send to Mealie failed: {e}"
+            action_error = friendly_error("Send to Mealie", e)
     return render(request, "cookidoo/_recipe_card.html", _recipe_context(recipe, action_error))

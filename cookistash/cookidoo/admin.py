@@ -25,7 +25,7 @@ from django_json_widget.widgets import JSONEditorWidget
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.forms import AdminPasswordChangeForm, UserChangeForm, UserCreationForm
 
-from cookistash.utils import parse_recipe_id
+from cookistash.utils import friendly_error, parse_recipe_id
 
 from ..mealie.models import Recipe as MealieRecipe
 from ..mealie.models import Source as MealieSource
@@ -237,7 +237,7 @@ class RecipeAdmin(ModelAdmin):
                 scrape_recipe.apply(args=(recipe.id,)).get(disable_sync_subtasks=False)
                 ok += 1
             except Exception as e:
-                failed.append(f"{recipe.id}: {e}")
+                failed.append(f"{recipe.id}: {friendly_error('Re-scrape', e)}")
         if ok:
             self.message_user(request, f"Re-scraped {ok} recipe(s).", level=messages.SUCCESS)
         for msg in failed:
@@ -254,7 +254,7 @@ class RecipeAdmin(ModelAdmin):
                 send_to_mealie.apply(args=(recipe.id,), kwargs={"force": True}).get(disable_sync_subtasks=False)
                 ok += 1
             except Exception as e:
-                failed.append(f"{recipe.id}: {e}")
+                failed.append(f"{recipe.id}: {friendly_error('Send to Mealie', e)}")
         if ok:
             self.message_user(request, f"Sent {ok} recipe(s) to Mealie.", level=messages.SUCCESS)
         for msg in failed:

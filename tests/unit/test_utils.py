@@ -1,6 +1,10 @@
-import pytest
+from unittest.mock import MagicMock
 
-from cookistash.utils import camel_to_snake, parse_cookidoo_explore_url, parse_recipe_id, snake_to_camel
+import pytest
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError
+
+from cookistash.utils import camel_to_snake, friendly_error, parse_cookidoo_explore_url, parse_recipe_id, snake_to_camel
 
 
 @pytest.mark.parametrize(
@@ -74,3 +78,24 @@ def test_parse_cookidoo_explore_url(url, expected):
 def test_parse_cookidoo_explore_url_invalid(url):
     with pytest.raises(ValueError):
         parse_cookidoo_explore_url(url)
+
+
+class TestFriendlyError:
+    def test_http_error_hides_url_shows_status(self):
+        response = MagicMock(status_code=500)
+        exc = HTTPError("500 Server Error: Internal Server Error for url: http://mealie:9000/api/organizers/tags")
+        exc.response = response
+
+        message = friendly_error("Send to Mealie", exc)
+
+        assert "500" in message
+        assert "mealie:9000" not in message
+        assert message.startswith("Send to Mealie failed:")
+
+    def test_connection_error_is_generic(self):
+        message = friendly_error("Send to Mealie", RequestsConnectionError("Failed to resolve 'mealie'"))
+        assert message == "Send to Mealie failed: couldn't reach the server. Check it's running and reachable."
+
+    def test_other_exceptions_fall_back_to_str(self):
+        message = friendly_error("Scrape of r123", ValueError("something odd"))
+        assert message == "Scrape of r123 failed: something odd"

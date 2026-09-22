@@ -1,5 +1,30 @@
+import logging
 import re
 from urllib.parse import urlparse
+
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
+
+logger = logging.getLogger(__name__)
+
+
+def friendly_error(action: str, exc: Exception) -> str:
+    """Turn a scrape/sync exception into a short, UI-safe message.
+
+    The full exception (which can include internal URLs like
+    "http://mealie:9000/..." - meaningless, and slightly exposing, to a
+    browser user) is always logged server-side with a traceback; only a
+    generic summary is ever shown in the UI.
+    """
+    logger.exception("%s failed", action)
+    if isinstance(exc, HTTPError) and exc.response is not None:
+        return (
+            f"{action} failed: the server responded with {exc.response.status_code}. "
+            "Check Flower or the container logs for details."
+        )
+    if isinstance(exc, (RequestsConnectionError, Timeout)):
+        return f"{action} failed: couldn't reach the server. Check it's running and reachable."
+    return f"{action} failed: {exc}"
 
 
 def parse_cookidoo_explore_url(url: str) -> tuple[str, str]:

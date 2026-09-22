@@ -55,9 +55,13 @@ class MealieClient(Session):
             return None, response.status_code
 
     def _find_by_name(self, endpoint, name):
+        # Case-insensitive: Mealie's own uniqueness constraint on these
+        # names is case-insensitive (POSTing "vegetarian" when "Vegetarian"
+        # already exists 500s server-side rather than 409ing), so an exact
+        # match here would miss the very row that caused the conflict.
         result = self._request("GET", endpoint, params={"search": name})
         for item in result.json().get("items", []):
-            if item["name"] == name:
+            if item["name"].casefold() == name.casefold():
                 return item
         return None
 
