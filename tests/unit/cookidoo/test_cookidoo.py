@@ -77,6 +77,25 @@ class TestCookidooClient:
             "GET", f"{cookidoo_client.url}/recipes/recipe/{cookidoo_client.locale}/r1234"
         )
 
+    def test_search(self, cookidoo_client):
+        mock_data = {"data": [{"id": "r1", "title": "Soup"}, {"id": "r2", "title": "Cake"}]}
+        with patch.object(cookidoo_client, "request", return_value=MagicMock(json=lambda: mock_data)) as mock_request:
+            results = cookidoo_client.search(category="cat1", page=1, limit=10, sortby="rating", rating=5)
+
+        assert results == mock_data["data"]
+        mock_request.assert_called_once_with(
+            "GET",
+            f"search/{cookidoo_client.locale}",
+            params={"page": 1, "limit": 10, "categories": "cat1", "sortby": "rating", "rating": 5},
+        )
+
+    def test_search_no_category(self, cookidoo_client):
+        mock_data = {"data": []}
+        with patch.object(cookidoo_client, "request", return_value=MagicMock(json=lambda: mock_data)) as mock_request:
+            cookidoo_client.search()
+
+        mock_request.assert_called_once_with("GET", f"search/{cookidoo_client.locale}", params={"page": 0, "limit": 24})
+
     @pytest.mark.parametrize("country", ["pt", "uk"])
     def test_get_country_recipes(self, cookidoo_client, country):
 
