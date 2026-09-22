@@ -70,6 +70,13 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: django-db
       COOKIDOO_EXPLORE_URL: https://cookidoo.pt/foundation/pt-PT/explore
+      # Optional - Mealie sync only activates once these are set. Generate
+      # MEALIE_API_TOKEN in Mealie's UI (Profile > API Tokens) after first
+      # login, see README.
+      # MEALIE_API_URL: http://mealie:9000
+      # MEALIE_PUBLIC_URL: http://localhost:9000
+      # MEALIE_GROUP_SLUG: home
+      # MEALIE_API_TOKEN: ""
     depends_on:
       postgres:
         condition: service_healthy

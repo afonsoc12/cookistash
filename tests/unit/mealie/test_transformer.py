@@ -163,7 +163,7 @@ def scrape(cookidoo_recipe):
 
 @pytest.fixture
 def mealie_source():
-    return Source.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+    return Source.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
 
 
 @pytest.mark.django_db

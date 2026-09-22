@@ -65,7 +65,7 @@ def _build_nutrition(nutrition_groups):
 
 class MealieTransformer:
     def __init__(self):
-        self.mealie_client = MealieClient(Source.objects.get(is_default=True))
+        self.mealie_client = MealieClient(Source.objects.get())
 
     def transform(self, scrape: ScrapedRecipe) -> MealieRecipe:
         data = scrape.raw_data

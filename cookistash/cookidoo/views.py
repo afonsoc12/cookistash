@@ -59,7 +59,7 @@ def _recipe_context(recipe, action_error=None):
     mealie_recipe = MealieRecipe.objects.filter(recipe=recipe).first()
     mealie_recipe_url = None
     if mealie_recipe and mealie_recipe.mealie_slug:
-        mealie_source = MealieSource.objects.filter(is_default=True).first()
+        mealie_source = MealieSource.objects.first()
         if mealie_source:
             mealie_recipe_url = mealie_source.recipe_url(mealie_recipe.mealie_slug)
     return {
@@ -92,7 +92,7 @@ def recipe_list(request):
             "rows": rows,
             "query": query,
             "has_cookidoo_source": Source.objects.exists(),
-            "has_mealie_source": MealieSource.objects.filter(is_default=True).exists(),
+            "has_mealie_source": MealieSource.objects.exists(),
         },
     )
 
@@ -256,7 +256,7 @@ def recipe_send_to_mealie(request, recipe_id):
 
     recipe = get_object_or_404(Recipe, id=recipe_id)
     action_error = None
-    if not MealieSource.objects.filter(is_default=True).exists():
+    if not MealieSource.objects.exists():
         action_error = "No default Mealie source configured (see /admin/mealie/source/)."
     else:
         try:

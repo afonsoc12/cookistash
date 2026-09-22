@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from cookistash.cookidoo.models import Recipe as CookidooRecipe
@@ -109,6 +110,11 @@ class ModelMealieApi(models.Model):
 
 
 class Source(models.Model):
+    """Like cookidoo.Source, a singleton - normally bootstrapped from the
+    MEALIE_API_URL/MEALIE_API_TOKEN (etc) env vars, see the
+    sync_mealie_source management command, not hand-entered in admin.
+    """
+
     name = models.CharField(max_length=100)
     api_url = models.URLField(help_text="Server-to-server API URL, e.g. http://mealie:9000 on the docker network.")
     public_url = models.URLField(
@@ -121,7 +127,6 @@ class Source(models.Model):
     )
     api_token = models.CharField(max_length=350)
     headers = models.JSONField(default=dict, blank=True, null=True)
-    is_default = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name}"
@@ -131,13 +136,10 @@ class Source(models.Model):
         return f"{base}/g/{self.group_slug}/r/{slug}"
 
     def save(self, *args, **kwargs):
-        if self.is_default:
-            # clear any existing default
-            Source.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
-        # Auto-default the first source created, so the app is usable
-        # without a manual "mark as default" step.
-        elif not Source.objects.filter(is_default=True).exists():
-            self.is_default = True
+        if self.pk is None and Source.objects.exists():
+            raise ValidationError(
+                "Only one Mealie Source is supported - edit the existing one instead of creating a new one."
+            )
         super().save(*args, **kwargs)
 
 

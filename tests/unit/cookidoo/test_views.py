@@ -146,7 +146,7 @@ class TestRecipeList:
     def test_has_mealie_source_true_when_configured(self, client, recipe):
         from cookistash.mealie.models import Source as MealieSource
 
-        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
         resp = client.get(reverse("cookidoo:recipe_list"))
         assert resp.context["has_mealie_source"] is True
 
@@ -210,7 +210,6 @@ class TestRecipeDetail:
             public_url="https://mealie.example.com",
             group_slug="home",
             api_token="t",
-            is_default=True,
         )
         scrape = ScrapedRecipe.objects.create(recipe=recipe, success=True, raw_data={})
         MealieRecipe.objects.create(
@@ -302,7 +301,7 @@ class TestRecipeSendToMealie:
     def test_success(self, client, recipe):
         from cookistash.mealie.models import Source as MealieSource
 
-        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
         with patch("cookistash.cookidoo.views.send_to_mealie.apply") as mock_apply:
             mock_apply.return_value.get.return_value = "r123"
             resp = client.post(reverse("cookidoo:recipe_send_to_mealie", args=[recipe.id]))
@@ -312,7 +311,7 @@ class TestRecipeSendToMealie:
     def test_failure_renders_action_error(self, client, recipe):
         from cookistash.mealie.models import Source as MealieSource
 
-        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
         with patch("cookistash.cookidoo.views.send_to_mealie.apply", side_effect=RuntimeError("mealie down")):
             resp = client.post(reverse("cookidoo:recipe_send_to_mealie", args=[recipe.id]))
         assert resp.status_code == 200

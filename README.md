@@ -42,7 +42,7 @@ Migrations run automatically on container start.
 ### First-time setup
 
 1. Set `COOKIDOO_EXPLORE_URL` (see below) and restart — the Cookidoo source is created/updated automatically on every container start, no admin step needed. Cookidoo has a separate domain per market (`cookidoo.pt`, `cookidoo.co.uk`, `cookidoo.thermomix.com`, ...) with no cross-market API, so only one Cookidoo source is supported at a time.
-2. *(Optional)* To enable Mealie sync: log into Mealie with the default admin (`changeme@example.com` / `MyPassword`), change the password, generate an API token, then create a `mealie.Source` in the admin (`http://mealie:9000` as the API URL from inside the container network, plus the token, marked default).
+2. *(Optional)* To enable Mealie sync: log into Mealie with the default admin (`changeme@example.com` / `MyPassword`), change the password, generate an API token (Profile → API Tokens), then set `MEALIE_API_URL`/`MEALIE_API_TOKEN` (see below) and restart — same auto-create/update behavior as the Cookidoo source, and also single-source only.
 3. Use the UI to scrape a recipe by ID or pasted link, or browse **Discover**. **Send to Mealie** only appears once a Mealie source is configured.
 
 ## ⚙️ Configuration
@@ -52,6 +52,8 @@ All configuration is via environment variables (see `docker-compose.yml`).
 | Variable | Description | Default |
 |---|---|---|
 | `COOKIDOO_EXPLORE_URL` | Cookidoo "explore" page URL for your market, e.g. `https://cookidoo.pt/foundation/pt-PT/explore` — domain and locale are parsed from it and used to create/update the single `cookidoo.Source` on every container start | unset — no source is configured until this is set, nothing is assumed |
+| `MEALIE_API_URL` / `MEALIE_API_TOKEN` | Mealie server-to-server API URL (e.g. `http://mealie:9000`) and an API token generated in Mealie's UI — used to create/update the single `mealie.Source` on every container start | unset — Mealie sync stays disabled until both are set |
+| `MEALIE_PUBLIC_URL` / `MEALIE_GROUP_SLUG` | Browser-facing Mealie URL (for links in the UI, falls back to `MEALIE_API_URL`) and the Mealie group slug used to build recipe links | unset / `home` |
 | `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` / `DB_PORT` | Postgres connection | `localhost` / `cookistash` / `postgres` / `postgres` / `5432` |
 | `CELERY_BROKER_URL` | Redis broker URL | `redis://localhost:6379/0` |
 | `CELERY_RESULT_BACKEND` | Celery result backend | `django-db` |

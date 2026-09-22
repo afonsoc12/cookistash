@@ -5,7 +5,11 @@ from cookistash.mealie.models import Food, Ingredient, Recipe, Source, Unit
 
 
 @admin.register(Source)
-class SourceAdmin(ModelAdmin): ...
+class SourceAdmin(ModelAdmin):
+    def has_add_permission(self, request):
+        # Singleton - normally bootstrapped from MEALIE_API_URL/
+        # MEALIE_API_TOKEN, see mealie.Source.save().
+        return not Source.objects.exists()
 
 
 @admin.register(Food)

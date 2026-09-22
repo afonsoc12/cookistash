@@ -177,7 +177,6 @@ class TestRecipeAdminDisplay:
             public_url="https://mealie.example.com",
             group_slug="home",
             api_token="t",
-            is_default=True,
         )
         admin_obj = self._admin()
         html = admin_obj.mealie_sync_status(recipe)
@@ -232,7 +231,7 @@ class TestRecipeAdminActions:
         assert any("No default Mealie source" in m for m in messages)
 
     def test_send_to_mealie_selected_success(self, admin_user, recipe, source):
-        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
         admin_obj = self._admin()
         request = self._request(admin_user)
         with patch("cookistash.cookidoo.admin.send_to_mealie.apply") as mock_apply:
@@ -242,7 +241,7 @@ class TestRecipeAdminActions:
         assert any("Sent 1 recipe" in m for m in messages)
 
     def test_send_to_mealie_selected_reports_failures(self, admin_user, recipe, source):
-        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t", is_default=True)
+        MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
         admin_obj = self._admin()
         request = self._request(admin_user)
         with patch("cookistash.cookidoo.admin.send_to_mealie.apply", side_effect=RuntimeError("mealie down")):

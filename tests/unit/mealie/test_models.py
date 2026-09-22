@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import uuid4
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.db import models
 
 from cookistash.mealie.models import Food, Ingredient, Instruction, ModelMealieApi, Source, Unit
@@ -170,40 +171,23 @@ class TestModelMealieApiRelations:
 
 class TestSource:
     def test_create_source(self):
-        source = Source.objects.create(
-            name="Mealie", api_url="https://example.com", api_token="verysecrettoken", is_default=True
-        )
+        source = Source.objects.create(name="Mealie", api_url="https://example.com", api_token="verysecrettoken")
         assert source.pk is not None
         assert str(source) == "Mealie"
-        assert source.is_default is True
 
-    def test_only_one_default_with_three_sources(self):
+    def test_second_source_rejected(self):
         url = "https://mealie.example.com"
         token = "verysecrettoken"
+        Source.objects.create(name="Source 1", api_url=url, api_token=token)
+        with pytest.raises(ValidationError):
+            Source.objects.create(name="Source 2", api_url=url, api_token=token)
 
-        s1 = Source.objects.create(name="Source 1", api_url=url, api_token=token, is_default=True)
-        assert s1.is_default is True
-
-        s2 = Source.objects.create(name="Source 2", api_url=url, api_token=token, is_default=True)
-        s1.refresh_from_db()
-        assert s1.is_default is False
-        assert s2.is_default is True
-
-        s3 = Source.objects.create(name="Source 3", api_url=url, api_token=token, is_default=True)
-        s1.refresh_from_db()
-        s2.refresh_from_db()
-        assert s1.is_default is False
-        assert s2.is_default is False
-        assert s3.is_default is True
-
-    @pytest.mark.parametrize("name, is_default", [("s1", False), ("s2", True)])
-    def test_auto_default_if_none(self, name, is_default):
-        source = Source.objects.create(
-            name=name, api_url="https://example.com", api_token="verysecrettoken", is_default=is_default
-        )
-        assert source.pk is not None
-        assert str(source) == name
-        assert source.is_default is True
+    def test_existing_source_can_be_updated(self):
+        source = Source.objects.create(name="Source 1", api_url="https://example.com", api_token="verysecrettoken")
+        source.group_slug = "other"
+        source.save()
+        source.refresh_from_db()
+        assert source.group_slug == "other"
 
     def test_recipe_url_uses_public_url_when_set(self):
         source = Source.objects.create(

@@ -220,7 +220,7 @@ class RecipeAdmin(ModelAdmin):
         mealie_recipe = MealieRecipe.objects.filter(recipe=obj).first()
         if not mealie_recipe or not mealie_recipe.mealie_slug:
             return "not synced"
-        source = MealieSource.objects.filter(is_default=True).first()
+        source = MealieSource.objects.first()
         if not source:
             return f"synced ({mealie_recipe.mealie_slug})"
         url = source.recipe_url(mealie_recipe.mealie_slug)
@@ -245,7 +245,7 @@ class RecipeAdmin(ModelAdmin):
 
     @admin.action(description="Send selected recipes to Mealie")
     def send_to_mealie_selected(self, request, queryset):
-        if not MealieSource.objects.filter(is_default=True).exists():
+        if not MealieSource.objects.exists():
             self.message_user(request, "No default Mealie source configured.", level=messages.ERROR)
             return
         ok, failed = 0, []

@@ -66,7 +66,6 @@ def mealie_source(db):
         public_url=MEALIE_URL,
         group_slug="home",
         api_token=_mealie_admin_token(),
-        is_default=True,
     )
 
 
