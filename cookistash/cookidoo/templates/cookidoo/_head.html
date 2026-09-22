@@ -1,0 +1,21 @@
+{% load static %}
+<meta charset="UTF-8">
+<title>{{ title|default:"Cookistash" }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" sizes="32x32" href="{% static 'cookidoo/img/favicon-32.png' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% static 'cookidoo/img/favicon-16.png' %}">
+<link rel="apple-touch-icon" sizes="180x180" href="{% static 'cookidoo/img/apple-touch-icon.png' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Loaded non-blocking (media=print swapped to all on load) so a slow/cold
+     connection to fonts.googleapis.com never blanks the first paint - the
+     page renders immediately with the fallback stack and swaps once ready. -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800{{ extra_fonts|default:"" }}&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800{{ extra_fonts|default:"" }}&display=swap" rel="stylesheet"></noscript>
+<link rel="stylesheet" href="{% static 'cookidoo/css/app.css' %}">
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+<script>
+    document.addEventListener('htmx:configRequest', (event) => {
+        event.detail.headers['X-CSRFToken'] = '{{ csrf_token }}';
+    });
+</script>

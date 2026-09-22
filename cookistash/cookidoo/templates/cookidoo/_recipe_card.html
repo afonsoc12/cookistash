@@ -13,7 +13,7 @@
         <a href="{{ recipe.url }}" target="_blank" class="card-id">{{ recipe.id }} ↗</a>
 
         <div class="card-meta">
-            <span class="meta-item">🕓 {{ recipe.last_scraped_at|default:"never scraped" }}</span>
+            <span>🕓 {{ recipe.last_scraped_at|default:"never scraped" }}</span>
         </div>
 
         <div class="card-sync">

@@ -131,10 +131,11 @@ To cut a release: bump the version with `uv version --bump patch|minor|major`, m
 
 ## 🗺️ Roadmap
 
-- [ ] Batch/collection import (`CookidooClient.get_country_recipes()` exists, no task/UI wrapper yet)
+- [x] Browse/search Cookidoo's catalog and import without needing a recipe ID first — see **Discover**
+- [ ] Bulk import (Discover imports one recipe at a time; `CookidooClient.get_country_recipes()` exists for full-catalog fetches but has no task/UI wrapper yet)
 - [ ] Retry/backoff on Celery tasks and outbound HTTP calls
 - [ ] Rate limiting on collection scraping
-- [ ] Search by ingredient/category/tag in the Explorer (currently name only)
+- [ ] Search by ingredient in the Explorer (currently name only - Discover's own search already covers Cookidoo-side keyword search)
 
 ## 📄 License
 

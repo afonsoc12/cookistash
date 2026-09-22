@@ -1,0 +1,15 @@
+{% load static %}
+<div class="topbar">
+    <div class="topbar-inner">
+        <div class="brand"><img class="brand-icon" src="{% static 'cookidoo/img/icon.png' %}" alt="Cookistash"> Cookistash</div>
+        <nav class="nav-tabs">
+            <a href="{% url 'cookidoo:recipe_list' %}" class="nav-tab {% if active == 'recipes' %}active{% endif %}">🥘 Recipes</a>
+            <a href="{% url 'cookidoo:discover' %}" class="nav-tab {% if active == 'discover' %}active{% endif %}">🧭 Discover</a>
+        </nav>
+        <div class="topbar-actions-right">
+            {% if show_back %}<a href="{% url 'cookidoo:recipe_list' %}" class="back-link">← Back</a>{% endif %}
+            <a href="/flower/" class="admin-link" target="_blank" rel="noopener">🌸 Celery →</a>
+            <a href="/admin/" class="admin-link">⚙ Admin →</a>
+        </div>
+    </div>
+</div>
