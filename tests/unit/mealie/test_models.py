@@ -1,9 +1,11 @@
+from datetime import datetime
 from uuid import uuid4
 
 import pytest
 from django.db import models
 
-from cookistash.mealie.models import ModelMealieApi, Source
+from cookistash.mealie.models import Food, Ingredient, Instruction, ModelMealieApi, Source, Unit
+from cookistash.mealie.models import Recipe as MealieRecipe
 
 pytestmark = pytest.mark.django_db
 
@@ -92,6 +94,79 @@ class TestModelMealieApi:
         assert data["ingredientNotation"] == "Grated cheese"
         assert data["name"] == "Parmesan cheese"
 
+    def test_to_api_data_excludes_requested_fields(self, concrete_model):
+        obj = concrete_model.objects.create(name="Salt", unit_ref="ref-1", ingredient_notation="Fine salt")
+        data = obj.to_api_data(exclude=["unit_ref"])
+        assert "unitRef" not in data
+        assert data["name"] == "Salt"
+
+    def test_to_api_data_skips_none_values(self, concrete_model):
+        obj = concrete_model.objects.create(name="Salt", unit_ref=None, ingredient_notation=None)
+        data = obj.to_api_data()
+        assert "unitRef" not in data
+        assert "ingredientNotation" not in data
+
+
+class TestModelMealieApiRelations:
+    """Covers the FK/M2M branches of to_api_data() via real concrete models
+    (Ingredient -> Food/Unit FKs, Recipe -> Ingredient M2M, Recipe -> Cookidoo
+    Recipe FK without its own to_api_data)."""
+
+    @pytest.fixture
+    def cookidoo_recipe(self):
+        from cookistash.cookidoo.models import Recipe as CookidooRecipe
+
+        return CookidooRecipe.objects.create(
+            id="r123", name="Gazpacho", language="en", markets=[], status="ok", publication_date=datetime.now()
+        )
+
+    @pytest.fixture
+    def scrape(self, cookidoo_recipe):
+        from cookistash.cookidoo.models import ScrapedRecipe
+
+        return ScrapedRecipe.objects.create(recipe=cookidoo_recipe, success=True)
+
+    def test_fk_to_related_object_with_to_api_data_is_nested(self):
+        food = Food.objects.create(name="Salt")
+        unit = Unit.objects.create(name="g")
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=5, food=food, unit=unit)
+
+        data = ingredient.to_api_data()
+
+        assert data["food"]["name"] == "Salt"
+        assert data["unit"]["name"] == "g"
+
+    def test_fk_to_related_object_without_to_api_data_uses_pk(self, cookidoo_recipe, scrape):
+        recipe = MealieRecipe.objects.create(
+            recipe=cookidoo_recipe, scraped_recipe=scrape, name="Gazpacho", image_url="", org_url=""
+        )
+        data = recipe.to_api_data()
+        assert data["recipe"] == cookidoo_recipe.pk
+
+    def test_null_fk_is_omitted_from_output(self):
+        # Note: to_api_data() skips any field whose value is None before it
+        # ever checks field.is_relation (see the `if value is None: continue`
+        # above), so a null FK is dropped entirely rather than serialized as
+        # `null` - the explicit None-handling further down in the relation
+        # branch is unreachable dead code.
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=1, food=None, unit=None)
+        data = ingredient.to_api_data()
+        assert "food" not in data
+        assert "unit" not in data
+
+    def test_many_to_many_serializes_related_objects(self, cookidoo_recipe, scrape):
+        food = Food.objects.create(name="Salt")
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=1, food=food)
+        recipe = MealieRecipe.objects.create(
+            recipe=cookidoo_recipe, scraped_recipe=scrape, name="Gazpacho", image_url="", org_url=""
+        )
+        recipe.recipe_ingredient.add(ingredient)
+
+        data = recipe.to_api_data()
+
+        assert len(data["recipeIngredient"]) == 1
+        assert data["recipeIngredient"][0]["quantity"] == 1
+
 
 class TestSource:
     def test_create_source(self):
@@ -129,3 +204,138 @@ class TestSource:
         assert source.pk is not None
         assert str(source) == name
         assert source.is_default is True
+
+    def test_recipe_url_uses_public_url_when_set(self):
+        source = Source.objects.create(
+            name="M",
+            api_url="http://mealie:9000",
+            public_url="https://mealie.example.com/",
+            group_slug="home",
+            api_token="t",
+        )
+        assert source.recipe_url("gazpacho") == "https://mealie.example.com/g/home/r/gazpacho"
+
+    def test_recipe_url_falls_back_to_api_url(self):
+        source = Source.objects.create(name="M", api_url="http://mealie:9000/", group_slug="home", api_token="t")
+        assert source.recipe_url("gazpacho") == "http://mealie:9000/g/home/r/gazpacho"
+
+
+class TestCookidooRefLookupMixin:
+    def test_get_or_create_by_ref_creates_when_missing(self):
+        food, created = Food.get_or_create_by_ref("ref-1", "Salt")
+        assert created is True
+        assert food.cookidoo_ref == "ref-1"
+        assert food.name == "Salt"
+
+    def test_get_or_create_by_ref_reuses_existing_ref(self):
+        first, _ = Food.get_or_create_by_ref("ref-1", "Salt")
+        second, created = Food.get_or_create_by_ref("ref-1", "Different display text")
+        assert created is False
+        assert second.pk == first.pk
+        assert second.name == "Salt"
+
+    def test_get_or_create_by_ref_falls_back_to_name_when_no_ref(self):
+        food, created = Food.get_or_create_by_ref(None, "Pepper")
+        assert created is True
+        assert food.cookidoo_ref is None
+        assert food.name == "Pepper"
+
+        food2, created2 = Food.get_or_create_by_ref("", "Pepper")
+        assert created2 is False
+        assert food2.pk == food.pk
+
+    def test_to_api_data_uses_mealie_id_when_set(self):
+        mealie_id = uuid4()
+        food = Food.objects.create(name="Salt", mealie_id=mealie_id)
+        data = food.to_api_data()
+        assert data["id"] == str(mealie_id)
+        assert "cookidooRef" not in data
+        assert "mealieId" not in data
+
+    def test_to_api_data_omits_id_when_no_mealie_id(self):
+        food = Food.objects.create(name="Salt")
+        data = food.to_api_data()
+        assert "id" not in data
+
+
+class TestFood:
+    def test_str(self):
+        food = Food.objects.create(name="Salt")
+        assert str(food) == "Salt"
+
+
+class TestUnit:
+    def test_str(self):
+        unit = Unit.objects.create(name="g")
+        assert str(unit) == "g"
+
+
+class TestIngredient:
+    def test_str_with_unit_and_note(self):
+        food = Food.objects.create(name="Salt")
+        unit = Unit.objects.create(name="g", abbreviation="g")
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=5, food=food, unit=unit, note="fine")
+        assert str(ingredient) == "5 g Salt (fine)"
+
+    def test_str_without_unit_or_food_or_note(self):
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=1)
+        assert str(ingredient) == "1  "
+
+    def test_str_uses_name_when_no_abbreviation(self):
+        food = Food.objects.create(name="Salt")
+        unit = Unit.objects.create(name="grams")
+        ingredient = Ingredient.objects.create(reference_id=uuid4(), quantity=2, food=food, unit=unit)
+        assert "grams" in str(ingredient)
+
+
+@pytest.mark.django_db
+class TestMealieRecipe:
+    @pytest.fixture
+    def cookidoo_recipe(self):
+        from cookistash.cookidoo.models import Recipe as CookidooRecipe
+
+        return CookidooRecipe.objects.create(
+            id="r123", name="Gazpacho", language="en", markets=[], status="ok", publication_date=datetime.now()
+        )
+
+    @pytest.fixture
+    def scrape(self, cookidoo_recipe):
+        from cookistash.cookidoo.models import ScrapedRecipe
+
+        return ScrapedRecipe.objects.create(recipe=cookidoo_recipe, success=True)
+
+    def test_save_defaults_slug_to_cookidoo_recipe_id(self, cookidoo_recipe, scrape):
+        recipe = MealieRecipe.objects.create(
+            recipe=cookidoo_recipe, scraped_recipe=scrape, name="Gazpacho", image_url="", org_url=""
+        )
+        assert recipe.slug == "r123"
+
+    def test_str(self, cookidoo_recipe, scrape):
+        recipe = MealieRecipe.objects.create(
+            recipe=cookidoo_recipe, scraped_recipe=scrape, name="Gazpacho", image_url="", org_url=""
+        )
+        assert str(recipe) == "Gazpacho (r123)"
+
+
+class TestInstruction:
+    def test_parse_instruction_replaces_pua_chars(self):
+        text = "Stir " + "" + " then add " + "" + " cheese"
+        assert Instruction.parse_instruction(text) == "Stir 🔄 then add 🥄 cheese"
+
+    def test_parse_instruction_leaves_normal_text_untouched(self):
+        assert Instruction.parse_instruction("Chop everything") == "Chop everything"
+
+    @pytest.mark.django_db
+    def test_str(self):
+        from cookistash.cookidoo.models import Recipe as CookidooRecipe
+        from cookistash.cookidoo.models import ScrapedRecipe
+
+        cookidoo_recipe = CookidooRecipe.objects.create(
+            id="r123", name="Gazpacho", language="en", markets=[], status="ok", publication_date=datetime.now()
+        )
+        scrape = ScrapedRecipe.objects.create(recipe=cookidoo_recipe, success=True)
+        recipe = MealieRecipe.objects.create(
+            recipe=cookidoo_recipe, scraped_recipe=scrape, name="Gazpacho", image_url="", org_url=""
+        )
+        instruction = Instruction.objects.create(recipe=recipe, title="Prep", summary="Step 1", formatted_text="Chop")
+        assert str(instruction) == "([Prep] Step 1: Chop"

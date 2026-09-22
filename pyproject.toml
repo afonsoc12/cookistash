@@ -48,7 +48,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["cookistash"]
-omit = ["*/migrations/*", "*/tests/*"]
+omit = ["*/migrations/*", "*/tests/*", "cookistash/asgi.py", "cookistash/wsgi.py"]
 
 [tool.coverage.report]
 fail_under = 90
