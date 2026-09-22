@@ -226,6 +226,18 @@ def recipe_scrape_new(request):
     return recipe_list(request)
 
 
+def _card_or_hero_template(request):
+    # These actions are wired up from two different places: the list page's
+    # per-card buttons (hx-target the card itself, swap _recipe_card.html
+    # back in) and the detail page's hero buttons (hx-target="#recipe-hero").
+    # htmx sends the target element's id as this header automatically.
+    return (
+        "cookidoo/_recipe_hero.html"
+        if request.headers.get("HX-Target") == "recipe-hero"
+        else "cookidoo/_recipe_card.html"
+    )
+
+
 @require_POST
 def recipe_rescrape(request, recipe_id):
     recipe = get_object_or_404(Recipe, id=recipe_id)
@@ -235,7 +247,7 @@ def recipe_rescrape(request, recipe_id):
     except Exception as e:
         action_error = friendly_error("Re-scrape", e)
     recipe.refresh_from_db()
-    return render(request, "cookidoo/_recipe_card.html", _recipe_context(recipe, action_error))
+    return render(request, _card_or_hero_template(request), _recipe_context(recipe, action_error))
 
 
 @require_POST
@@ -251,4 +263,4 @@ def recipe_send_to_mealie(request, recipe_id):
             send_to_mealie.apply(args=(recipe.id,), kwargs={"force": True}).get(disable_sync_subtasks=False)
         except Exception as e:
             action_error = friendly_error("Send to Mealie", e)
-    return render(request, "cookidoo/_recipe_card.html", _recipe_context(recipe, action_error))
+    return render(request, _card_or_hero_template(request), _recipe_context(recipe, action_error))

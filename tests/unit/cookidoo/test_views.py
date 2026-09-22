@@ -273,6 +273,21 @@ class TestRecipeRescrape:
         assert resp.status_code == 200
         assert b"boom" in resp.content
 
+    def test_default_renders_list_card_partial(self, client, recipe):
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:recipe_rescrape", args=[recipe.id]))
+        assert [t.name for t in resp.templates] == ["cookidoo/_recipe_card.html"]
+
+    def test_hx_target_recipe_hero_renders_hero_partial(self, client, recipe):
+        # The detail page's hero buttons hx-target="#recipe-hero" - htmx
+        # sends the target id as this header, used to pick the partial that
+        # actually matches the page doing the swap (see _card_or_hero_template).
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:recipe_rescrape", args=[recipe.id]), HTTP_HX_TARGET="recipe-hero")
+        assert [t.name for t in resp.templates] == ["cookidoo/_recipe_hero.html"]
+
 
 class TestRecipeSendToMealie:
     def test_404_for_unknown_recipe(self, client):

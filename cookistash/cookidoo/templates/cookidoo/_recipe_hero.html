@@ -1,0 +1,56 @@
+<div id="recipe-hero">
+    {% if action_error %}
+        <div class="banner banner-error">✕ {{ action_error }}</div>
+    {% endif %}
+
+    <div class="hero">
+        {% if recipe.image_url %}
+            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" class="hero-image">
+        {% endif %}
+        <div>
+            <h1 class="hero-title">{{ recipe.name }}</h1>
+            <a href="{{ recipe.url }}" target="_blank" class="hero-link">{{ recipe.id }} on Cookidoo ↗</a>
+
+            <div class="hero-pills">
+                <span class="pill pill-{{ recipe.scrape_status }}">{{ recipe.get_scrape_status_display }}</span>
+                {% if mealie_recipe %}
+                    {% if mealie_recipe_url %}
+                        <a href="{{ mealie_recipe_url }}" target="_blank" class="pill pill-success">✓ synced to Mealie ↗</a>
+                    {% else %}
+                        <span class="pill pill-success">✓ synced to Mealie</span>
+                    {% endif %}
+                {% else %}
+                    <span class="pill pill-muted">not synced</span>
+                {% endif %}
+            </div>
+
+            <div class="hero-meta">
+                <span>🕓 last scraped <strong>{{ recipe.last_scraped_at|default:"never" }}</strong></span>
+                {% if mealie_recipe.last_synced_at %}<span>🔗 last synced <strong>{{ mealie_recipe.last_synced_at }}</strong></span>{% endif %}
+                {% if mealie_recipe %}<span>servings <strong>{{ mealie_recipe.recipe_servings|default:"—" }} {{ mealie_recipe.recipe_yield }}</strong></span>{% endif %}
+                {% if mealie_recipe.total_time %}<span>⏱ total <strong>{{ mealie_recipe.total_time }}</strong></span>{% endif %}
+                {% if mealie_recipe.prep_time %}<span>prep <strong>{{ mealie_recipe.prep_time }}</strong></span>{% endif %}
+            </div>
+
+            <div class="hero-actions">
+                <button
+                    class="btn btn-outline"
+                    hx-post="{% url 'cookidoo:recipe_rescrape' recipe.id %}"
+                    hx-target="#recipe-hero" hx-swap="outerHTML"
+                    hx-indicator="#hero-spinner-1">
+                    <span class="btn-spinner htmx-indicator" id="hero-spinner-1"></span>
+                    ↻ Re-scrape
+                </button>
+                <button
+                    class="btn btn-primary"
+                    hx-post="{% url 'cookidoo:recipe_send_to_mealie' recipe.id %}"
+                    hx-target="#recipe-hero" hx-swap="outerHTML"
+                    hx-indicator="#hero-spinner-2"
+                    {% if not latest_scrape or not latest_scrape.success %}disabled{% endif %}>
+                    <span class="btn-spinner htmx-indicator" id="hero-spinner-2"></span>
+                    → Send to Mealie
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
