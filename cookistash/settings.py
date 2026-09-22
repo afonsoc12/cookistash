@@ -28,6 +28,12 @@ DEBUG = os.environ.get("DEBUG", "true").lower() == "true"
 
 ALLOWED_HOSTS = [h for h in os.environ.get("ALLOWED_HOSTS", "*").split(",") if h]
 
+# Needed behind any reverse proxy that doesn't forward the exact original
+# Host header (port included) - CSRF's Origin check compares the browser's
+# Origin against http(s)://<request Host>, so a mismatch here 403s every
+# POST. Empty by default; set to e.g. "https://cookistash.example.com".
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+
 
 # Application definition
 

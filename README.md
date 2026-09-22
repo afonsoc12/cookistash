@@ -58,6 +58,7 @@ All configuration is via environment variables (see `docker-compose.yml`).
 | `DEBUG` | Django debug mode | `true` |
 | `SECRET_KEY` | Django secret key | insecure dev default — **set this in production** |
 | `ALLOWED_HOSTS` | Comma-separated allowed hosts | `*` |
+| `CSRF_TRUSTED_ORIGINS` | Comma-separated origins (with scheme, e.g. `https://cookistash.example.com`) trusted for POST requests - needed if you put another reverse proxy in front that doesn't forward the original Host header | unset |
 | `AUTO_ADMIN_LOGIN` | Skip the admin login form, auto-authenticate as the superuser | `true` — **only safe on localhost/private networks**, set `false` if ever exposed |
 
 ## 🖥️ UI
