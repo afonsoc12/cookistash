@@ -307,22 +307,3 @@ class TestScrapedRecipeAdmin:
         # directly rather than via an invalid DB row.
         admin_obj = self._admin()
         assert admin_obj.linked_recipe(MagicMock(recipe=None)) == "-"
-
-    def test_create_recipe_from_scrape_creates(self, admin_user, recipe):
-        from cookistash.cookidoo.models import ScrapedRecipe
-
-        scrape = ScrapedRecipe.objects.create(recipe=recipe, success=True)
-        admin_obj = self._admin()
-        rf = RequestFactory()
-        request = rf.post("/admin/cookidoo/scrapedrecipe/")
-        request.user = admin_user
-        request.session = {}
-        from django.contrib.messages.storage.fallback import FallbackStorage
-
-        request._messages = FallbackStorage(request)
-
-        admin_obj.create_recipe_from_scrape(request, ScrapedRecipe.objects.filter(pk=scrape.pk))
-
-        assert MealieRecipe.objects.filter(recipe=recipe).exists()
-        messages = [str(m) for m in get_messages(request)]
-        assert any("1 created" in m for m in messages)

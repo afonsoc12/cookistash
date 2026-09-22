@@ -307,23 +307,3 @@ class ScrapedRecipeAdmin(ModelAdmin):
             return "-"
         url = reverse("admin:cookidoo_recipe_change", args=[obj.recipe.id])
         return mark_safe(f'<a href="{url}">{obj.recipe}</a>')
-
-    actions = ["create_recipe_from_scrape"]
-
-    @admin.action(description="Create Mealie Recipe from ScrappedRecipe")
-    def create_recipe_from_scrape(self, request, queryset):
-        """
-        Create Recipe objects from selected ScrappedRecipe entries,
-        resolving the category foreign key.
-        """
-        created_ct = 0
-        updated_ct = 0
-        for scrape in queryset:
-            recipe, created = MealieRecipe.objects.update_or_create(
-                recipe=scrape.recipe, defaults={"scraped_recipe": scrape}
-            )
-
-            created_ct += created
-            updated_ct += not created
-
-        self.message_user(request, f"{created_ct} created, {updated_ct} updated successfully!")
