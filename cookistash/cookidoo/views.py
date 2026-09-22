@@ -91,7 +91,7 @@ def recipe_list(request):
             "page": page,
             "rows": rows,
             "query": query,
-            "has_cookidoo_source": Source.objects.filter(is_default=True).exists(),
+            "has_cookidoo_source": Source.objects.exists(),
             "has_mealie_source": MealieSource.objects.filter(is_default=True).exists(),
         },
     )
@@ -132,9 +132,15 @@ def discover(request):
     """POC: browse Cookidoo's own catalog by category and import from there,
     instead of needing a recipe ID/link up front.
     """
-    source = Source.objects.filter(is_default=True).first()
+    source = Source.objects.first()
     category = request.GET.get("category", "")
-    country = request.GET.get("country", "")
+    # "country" absent entirely (first visit) defaults to the configured
+    # source's own market; an explicit "?country=" (including empty, from
+    # picking "All countries") always wins.
+    if "country" in request.GET:
+        country = request.GET.get("country", "")
+    else:
+        country = source.country if source else ""
     query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 0))
 
@@ -205,10 +211,10 @@ def recipe_scrape_new(request):
         pass
     elif not recipe_id:
         messages.error(request, f"Couldn't find a recipe ID (e.g. r123456) in '{raw_input}'.")
-    elif not Source.objects.filter(is_default=True).exists():
+    elif not Source.objects.exists():
         messages.error(
             request,
-            "No default Cookidoo source is configured. Create one in the "
+            "No Cookidoo source is configured. Create one in the "
             "Django admin (/admin/cookidoo/source/) before scraping.",
         )
     else:

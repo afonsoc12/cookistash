@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from django.core.exceptions import ValidationError
 
 from cookistash.cookidoo.models import Recipe, ScrapedRecipe, Source
 
@@ -9,33 +10,25 @@ pytestmark = pytest.mark.django_db
 
 class TestSource:
     def test_create_source(self):
-        source = Source.objects.create(name="Test Source", url="https://example.com", locale="en-GB", is_default=True)
+        source = Source.objects.create(name="Test Source", url="https://example.com", locale="en-GB")
         assert source.pk is not None
         assert str(source) == "Test Source"
-        assert source.is_default is True
 
-    def test_only_one_default_with_three_sources(self):
-        s1 = Source.objects.create(name="Source 1", locale="en-GB", is_default=True)
-        assert s1.is_default is True
+    def test_country_derived_from_locale(self):
+        source = Source.objects.create(name="S", url="https://cookidoo.pt", locale="pt-PT")
+        assert source.country == "pt"
 
-        s2 = Source.objects.create(name="Source 2", locale="en-GB", is_default=True)
-        s1.refresh_from_db()
-        assert s1.is_default is False
-        assert s2.is_default is True
+    def test_second_source_rejected(self):
+        Source.objects.create(name="Source 1", url="https://example.com", locale="en-GB")
+        with pytest.raises(ValidationError):
+            Source.objects.create(name="Source 2", url="https://example.com", locale="pt-PT")
 
-        s3 = Source.objects.create(name="Source 3", locale="en-GB", is_default=True)
-        s1.refresh_from_db()
-        s2.refresh_from_db()
-        assert s1.is_default is False
-        assert s2.is_default is False
-        assert s3.is_default is True
-
-    @pytest.mark.parametrize("name, is_default", [("s1", False), ("s2", True)])
-    def test_auto_default_if_none(self, name, is_default):
-        source = Source.objects.create(name=name, url="https://example.com", is_default=is_default)
-        assert source.pk is not None
-        assert str(source) == name
-        assert source.is_default is True
+    def test_existing_source_can_be_updated(self):
+        source = Source.objects.create(name="Source 1", url="https://example.com", locale="en-GB")
+        source.locale = "pt-PT"
+        source.save()
+        source.refresh_from_db()
+        assert source.locale == "pt-PT"
 
 
 class TestRecipe:

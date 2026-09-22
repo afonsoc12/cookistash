@@ -21,4 +21,7 @@ done
 echo "Running migrations..."
 /app/.venv/bin/python manage.py migrate --noinput
 
+echo "Syncing Cookidoo source..."
+/app/.venv/bin/python manage.py sync_cookidoo_source
+
 exec "$@"

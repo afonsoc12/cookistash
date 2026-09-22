@@ -165,7 +165,12 @@ class UnfoldIntervalScheduleAdmin(IntervalScheduleAdmin, ModelAdmin):
 
 @admin.register(Source)
 class Sources(ModelAdmin):
-    list_display = ["name", "url", "locale", "is_default"]
+    list_display = ["name", "url", "locale"]
+
+    def has_add_permission(self, request):
+        # Singleton - normally bootstrapped from COOKIDOO_EXPLORE_URL, see
+        # cookidoo.Source.save().
+        return not Source.objects.exists()
 
 
 class ScrapedRecipeInline(TabularInline):
@@ -223,8 +228,8 @@ class RecipeAdmin(ModelAdmin):
 
     @admin.action(description="Re-scrape selected recipes")
     def rescrape_selected(self, request, queryset):
-        if not Source.objects.filter(is_default=True).exists():
-            self.message_user(request, "No default Cookidoo source configured.", level=messages.ERROR)
+        if not Source.objects.exists():
+            self.message_user(request, "No Cookidoo source configured.", level=messages.ERROR)
             return
         ok, failed = 0, []
         for recipe in queryset:
@@ -271,8 +276,8 @@ class RecipeAdmin(ModelAdmin):
                 recipe_id = parse_recipe_id(recipe_input)
                 if not recipe_id:
                     messages.error(request, f"Couldn't find a recipe ID (e.g. r123456) in '{recipe_input}'.")
-                elif not Source.objects.filter(is_default=True).exists():
-                    messages.error(request, "No default Cookidoo source is configured. Create one first.")
+                elif not Source.objects.exists():
+                    messages.error(request, "No Cookidoo source is configured. Create one first.")
                 else:
                     task = scrape_recipe.delay(recipe_id)
                     messages.info(request, f"Scrape started for '{recipe_input}' (task id: {task.id})")

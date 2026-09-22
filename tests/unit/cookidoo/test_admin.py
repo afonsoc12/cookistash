@@ -24,7 +24,7 @@ def admin_user():
 
 @pytest.fixture
 def source():
-    return Source.objects.create(name="S", url="https://example.com", locale="en-GB", is_default=True)
+    return Source.objects.create(name="S", url="https://example.com", locale="en-GB")
 
 
 @pytest.fixture
@@ -205,7 +205,7 @@ class TestRecipeAdminActions:
         request = self._request(admin_user)
         admin_obj.rescrape_selected(request, Recipe.objects.filter(pk=recipe.pk))
         messages = [str(m) for m in get_messages(request)]
-        assert any("No default Cookidoo source" in m for m in messages)
+        assert any("No Cookidoo source" in m for m in messages)
 
     def test_rescrape_selected_success(self, admin_user, recipe, source):
         admin_obj = self._admin()
@@ -269,7 +269,7 @@ class TestScrapeView:
         client.force_login(admin_user)
         resp = client.post(reverse("admin:scrape-recipe"), {"recipe_input": "r123456"}, follow=True)
         messages = [str(m) for m in get_messages(resp.wsgi_request)]
-        assert any("No default Cookidoo source" in m for m in messages)
+        assert any("No Cookidoo source" in m for m in messages)
 
     def test_post_valid_dispatches_scrape(self, client, admin_user, source):
         client.force_login(admin_user)

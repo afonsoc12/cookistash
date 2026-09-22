@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def source():
-    return Source.objects.create(name="S", url="https://example.com", locale="en-GB", is_default=True)
+    return Source.objects.create(name="S", url="https://example.com", locale="en-GB")
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ class TestDiscover:
         assert resp.context["results"] == []
 
     def test_lists_results_and_flags_already_scraped(self, client):
-        Source.objects.create(name="S", url="https://example.com", locale="en-GB", is_default=True)
+        Source.objects.create(name="S", url="https://example.com", locale="en-GB")
         Recipe.objects.create(
             id="r1", name="Known", language="en", markets=[], status="ok", publication_date=datetime.now()
         )
@@ -55,12 +55,34 @@ class TestDiscover:
         assert by_id["r2"]["already_scraped"] is False
 
     def test_fetch_error_is_surfaced_not_raised(self, client):
-        Source.objects.create(name="S", url="https://example.com", locale="en-GB", is_default=True)
+        Source.objects.create(name="S", url="https://example.com", locale="en-GB")
         with patch("cookistash.cookidoo.views.CookidooClient.__init__", side_effect=Exception("boom")):
             resp = client.get(reverse("cookidoo:discover"))
 
         assert resp.status_code == 200
         assert "boom" in resp.context["fetch_error"]
+
+    def test_country_defaults_to_source_market_when_unset(self, client):
+        Source.objects.create(name="S", url="https://cookidoo.pt/", locale="pt-PT")
+        with (
+            patch("cookistash.cookidoo.views.CookidooClient.test", return_value=True),
+            patch("cookistash.cookidoo.views.CookidooClient.search", return_value=[]) as mock_search,
+        ):
+            resp = client.get(reverse("cookidoo:discover"))
+
+        assert resp.context["country"] == "pt"
+        mock_search.assert_called_once_with(category=None, country="pt", query=None, page=0, limit=24)
+
+    def test_explicit_empty_country_means_all_countries(self, client):
+        Source.objects.create(name="S", url="https://cookidoo.pt/", locale="pt-PT")
+        with (
+            patch("cookistash.cookidoo.views.CookidooClient.test", return_value=True),
+            patch("cookistash.cookidoo.views.CookidooClient.search", return_value=[]) as mock_search,
+        ):
+            resp = client.get(reverse("cookidoo:discover"), {"country": ""})
+
+        assert resp.context["country"] == ""
+        mock_search.assert_called_once_with(category=None, country=None, query=None, page=0, limit=24)
 
 
 class TestDiscoverImport:
@@ -217,7 +239,7 @@ class TestRecipeScrapeNew:
     def test_no_source_configured_shows_error(self, client):
         resp = client.post(reverse("cookidoo:recipe_scrape_new"), {"recipe_id": "r123456"}, follow=True)
         messages = list(get_messages_for(resp))
-        assert any("No default Cookidoo source" in str(m) for m in messages)
+        assert any("No Cookidoo source" in str(m) for m in messages)
 
     def test_valid_input_triggers_scrape(self, client, source):
         with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:

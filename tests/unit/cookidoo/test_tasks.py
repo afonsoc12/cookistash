@@ -18,7 +18,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def source():
-    return Source.objects.create(name="S", url="https://example.com", locale="en-GB", is_default=True)
+    return Source.objects.create(name="S", url="https://example.com", locale="en-GB")
 
 
 def _fake_recipe_data(recipe_id="r123", title="Gazpacho"):

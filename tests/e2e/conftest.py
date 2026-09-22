@@ -53,7 +53,6 @@ def cookidoo_source(db):
         name="e2e Cookidoo",
         url="https://cookidoo.co.uk/",
         locale="en-GB",
-        is_default=True,
     )
 
 

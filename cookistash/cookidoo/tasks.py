@@ -20,7 +20,7 @@ def _hash_data(data: dict) -> str:
 @shared_task(bind=True)
 def scrape_recipe(self, recipe_id: str, source: Source | None = None):
     if source is None:
-        source = Source.objects.get(is_default=True)
+        source = Source.objects.get()
 
     recipe, _ = Recipe.objects.get_or_create(
         id=recipe_id,

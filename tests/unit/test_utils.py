@@ -1,6 +1,6 @@
 import pytest
 
-from cookistash.utils import camel_to_snake, parse_recipe_id, snake_to_camel
+from cookistash.utils import camel_to_snake, parse_cookidoo_explore_url, parse_recipe_id, snake_to_camel
 
 
 @pytest.mark.parametrize(
@@ -49,3 +49,28 @@ def test_snake_to_camel(input_str, expected):
 )
 def test_parse_recipe_id(text, expected):
     assert parse_recipe_id(text) == expected
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("https://cookidoo.pt/foundation/pt-PT/explore", ("https://cookidoo.pt/", "pt-PT")),
+        ("https://cookidoo.thermomix.com/foundation/en-US/explore", ("https://cookidoo.thermomix.com/", "en-US")),
+        ("https://cookidoo.co.uk/foundation/en-GB/explore/", ("https://cookidoo.co.uk/", "en-GB")),
+    ],
+)
+def test_parse_cookidoo_explore_url(url, expected):
+    assert parse_cookidoo_explore_url(url) == expected
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "not a url",
+        "https://cookidoo.pt/foundation/explore",
+        "",
+    ],
+)
+def test_parse_cookidoo_explore_url_invalid(url):
+    with pytest.raises(ValueError):
+        parse_cookidoo_explore_url(url)

@@ -1,28 +1,39 @@
 from uuid import uuid4
 
+from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db import models
 from django_celery_results.models import TaskResult
 
 
 class Source(models.Model):
+    """Cookidoo has one domain per market (cookidoo.pt, cookidoo.co.uk,
+    cookidoo.thermomix.com, ...) with no cross-market API, so unlike Mealie
+    there's no sense in supporting more than one of these at once - a
+    single row is enforced in save() below. It's normally bootstrapped from
+    the COOKIDOO_EXPLORE_URL env var (see management command
+    sync_cookidoo_source), not hand-entered in admin.
+    """
+
     name = models.CharField(max_length=100)
-    url = models.URLField(default="https://cookidoo.thermomix.com/")
+    url = models.URLField()
     locale = models.CharField(max_length=5)
     headers = models.JSONField(default=dict, blank=True, null=True)
-    is_default = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.name}"
 
+    @property
+    def country(self) -> str:
+        """Lowercase market code derived from the locale, e.g. "pt-PT" -> "pt"."""
+        return self.locale.split("-")[-1].lower()
+
     def save(self, *args, **kwargs):
-        if self.is_default:
-            # clear any existing default
-            Source.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
-        # Auto-default the first source created, so the app is usable
-        # without a manual "mark as default" step.
-        elif not Source.objects.filter(is_default=True).exists():
-            self.is_default = True
+        if self.pk is None and Source.objects.exists():
+            raise ValidationError(
+                "Only one Cookidoo Source is supported (each market is a separate domain/API) - "
+                "edit the existing one instead of creating a new one."
+            )
         super().save(*args, **kwargs)
 
 

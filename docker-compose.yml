@@ -69,6 +69,7 @@ services:
       DB_PASSWORD: postgres
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: django-db
+      COOKIDOO_EXPLORE_URL: https://cookidoo.pt/foundation/pt-PT/explore
     depends_on:
       postgres:
         condition: service_healthy
