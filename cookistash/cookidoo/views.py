@@ -29,6 +29,18 @@ _NUTRITION_LABELS = {
 }
 
 
+def _format_duration(seconds):
+    if not seconds:
+        return None
+    minutes = round(seconds / 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours and minutes:
+        return f"{hours}h {minutes}min"
+    if hours:
+        return f"{hours}h"
+    return f"{minutes} min"
+
+
 def _nutrition_items(nutrition):
     items = []
     for key, value in (nutrition or {}).items():
@@ -123,6 +135,7 @@ def discover(request):
     source = Source.objects.filter(is_default=True).first()
     category = request.GET.get("category", "")
     country = request.GET.get("country", "")
+    query = request.GET.get("q", "").strip()
     page = int(request.GET.get("page", 0))
 
     results = []
@@ -130,13 +143,16 @@ def discover(request):
     if source:
         try:
             client = CookidooClient(source)
-            results = client.search(category=category or None, country=country or None, page=page, limit=24)
+            results = client.search(
+                category=category or None, country=country or None, query=query or None, page=page, limit=24
+            )
         except Exception as e:
             fetch_error = f"Couldn't fetch from Cookidoo: {e}"
 
     known_ids = set(Recipe.objects.filter(id__in=[r["id"] for r in results]).values_list("id", flat=True))
     for r in results:
         r["already_scraped"] = r["id"] in known_ids
+        r["total_time_display"] = _format_duration(r.get("totalTime"))
         if source:
             r["cookidoo_url"] = f"{source.url}recipes/recipe/{source.locale}/{r['id']}"
 
@@ -148,6 +164,7 @@ def discover(request):
             "countries": COUNTRIES,
             "category": category,
             "country": country,
+            "query": query,
             "page": page,
             "results": results,
             "fetch_error": fetch_error,
@@ -167,8 +184,9 @@ def discover_import(request, recipe_id):
 
     category = request.POST.get("category", "")
     country = request.POST.get("country", "")
+    query = request.POST.get("q", "")
     page = request.POST.get("page", "0")
-    return discover(_with_get(request, category=category, country=country, page=page))
+    return discover(_with_get(request, category=category, country=country, q=query, page=page))
 
 
 def _with_get(request, **params):

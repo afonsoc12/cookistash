@@ -102,7 +102,7 @@ class CookidooClient(Session):
         req = self.request("GET", f"recipes/recipe/{self.locale}/{recipe_id}")
         return req.json(), req
 
-    def search(self, category=None, country=None, page=0, limit=24, sortby=None, rating=None):
+    def search(self, category=None, country=None, query=None, page=0, limit=24, sortby=None, rating=None):
         """Search recipes for the Discover UI - a thin, paginated wrapper
         around the same search endpoint get_country_recipes() uses in bulk.
         Returns the raw list of result dicts (id, title, image, rating, totalTime, ...),
@@ -113,6 +113,8 @@ class CookidooClient(Session):
             params["categories"] = category
         if country:
             params["countries"] = country
+        if query:
+            params["query"] = query
         if sortby:
             params["sortby"] = sortby
         if rating:
