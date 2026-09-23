@@ -49,7 +49,6 @@ nosetests.xml
 *.cover
 *.py,cover
 .hypothesis/
-.planning/
 
 # Translations
 *.mo
@@ -110,7 +109,6 @@ venv.bak/
 # Spyder project settings
 .spyderproject
 .spyproject
-data/
 
 # Rope project settings
 .ropeproject
@@ -159,10 +157,6 @@ Temporary Items
 # Cookistash-specific
 # docker-compose bind-mounted service data (postgres/redis/mealie)
 tmp/
-
-# Auto-generated Django SECRET_KEY (see cookistash/settings.py) - unique per
-# install, never meant to be shared/committed.
-.secret_key
 
 # collectstatic output (gunicorn/nginx path only, regenerated on container start)
 /staticfiles/

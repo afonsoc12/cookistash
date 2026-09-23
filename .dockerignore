@@ -2,7 +2,6 @@
 build/
 staticfiles/
 tmp/
-tests_old/
 data/
 .git/
 .DS_Store
