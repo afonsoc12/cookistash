@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI agents working with code in this repository. Keep it current as the project evolves: add sections for new tooling/workflows as they're introduced, and remove or update anything that no longer reflects reality.
 
 ## Project Overview
 
@@ -67,7 +67,7 @@ All lint/type-check/test artifacts (`.pytest_cache/`, `.ruff_cache/`, `.mypy_cac
 
 ## CI (`.github/workflows/ci.yml`)
 
-Runs on every push (including `main`) and non-draft PR (draft PRs are skipped via a job-level `if`, marked ready for review to trigger it): ruff format/check, mypy, unit tests with coverage, then posts a coverage summary (badge, per-file breakdown, links to the `htmlcov`/`coverage.xml` artifact and to Codecov) to the job summary. Coverage is also uploaded to [Codecov](https://codecov.io/gh/afonsoc12/cookistash) for the richer hosted UI (trends, sunburst, PR diff coverage) — this is a public repo with the Codecov GitHub App installed, so uploads work tokenless (no `CODECOV_TOKEN` secret needed). No Postgres service needed — `settings.py` auto-detects `CI=true`. Doesn't build the Docker image — that only happens in `release.yml` (on `main`/version tags), which builds and pushes the real multi-arch image to GHCR.
+Runs on every push (including `main`) and non-draft PR (draft PRs are skipped via a job-level `if`, marked ready for review to trigger it): ruff format/check, mypy, unit tests with coverage, then posts a coverage summary (badge, per-file breakdown, links to the `htmlcov`/`coverage.xml` artifact and to Codecov) to the job summary. Coverage is also uploaded to [Codecov](https://codecov.io/gh/afonsoc12/cookistash) for the richer hosted UI (trends, sunburst, PR diff coverage) — authenticated via OIDC (`use_oidc: true` + the job's `id-token: write` permission), not a static token; Codecov's plain public-repo tokenless bypass is being retired in favor of this. No Postgres service needed — `settings.py` auto-detects `CI=true`. Doesn't build the Docker image — that only happens in `release.yml` (on `main`/version tags), which builds and pushes the real multi-arch image to GHCR.
 
 ## Configuration
 
