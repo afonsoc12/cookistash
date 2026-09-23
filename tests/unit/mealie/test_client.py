@@ -53,28 +53,14 @@ class TestRequest:
         # Unlike `mealie_client`, don't pre-patch .test() here - we're
         # testing its real implementation, not bypassing it.
         MealieClient(source)
-        mock_session.assert_called_once_with("GET", "https://mealie.example.com/api/app/about")
+        mock_session.assert_called_once_with(
+            "GET", "https://mealie.example.com/api/app/about", timeout=MealieClient.DEFAULT_TIMEOUT
+        )
 
     def test_test_raises_on_http_error(self, source, mock_session):
         mock_session.return_value.raise_for_status.side_effect = HTTPError()
         with pytest.raises(HTTPError):
             MealieClient(source)
-
-
-class TestParseResponse:
-    @pytest.mark.parametrize("status", [200, 201])
-    def test_success_statuses_return_json(self, mealie_client, status):
-        response = MagicMock(status_code=status)
-        response.json.return_value = {"ok": True}
-        data, code = mealie_client.parse_response(response)
-        assert data == {"ok": True}
-        assert code == status
-
-    def test_other_statuses_return_none(self, mealie_client):
-        response = MagicMock(status_code=404)
-        data, code = mealie_client.parse_response(response)
-        assert data is None
-        assert code == 404
 
 
 class TestFindByName:

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from django.core.cache import cache
 from requests import HTTPError, Session
 
 from cookistash.cookidoo.client import CookidooClient
@@ -9,6 +10,14 @@ from cookistash.cookidoo.models import Source
 
 @pytest.mark.django_db
 class TestCookidooClient:
+    @pytest.fixture(autouse=True)
+    def clear_cache(self):
+        # get_country_recipes() caches by locale+country - clear before/after
+        # each test so one test's cached result can't leak into another's.
+        cache.clear()
+        yield
+        cache.clear()
+
     @pytest.fixture
     def mock_session(self):
         with patch.object(Session, "request", return_value=MagicMock(status_code=200)) as mock_session:
@@ -46,7 +55,9 @@ class TestCookidooClient:
         method = "GET"
         endpoint = "test-endpoint"
         _ = cookidoo_client.request(method, endpoint)
-        mock_session.assert_called_once_with(method, f"{cookidoo_client.url}/{endpoint}")
+        mock_session.assert_called_once_with(
+            method, f"{cookidoo_client.url}/{endpoint}", timeout=CookidooClient.DEFAULT_TIMEOUT
+        )
 
     @pytest.mark.parametrize("endpoint", ["/test-endpoint", "test-endpoint/", "/test-endpoint/"])
     def test_request_cannot_start_end_slash(self, cookidoo_client, endpoint):
@@ -69,12 +80,14 @@ class TestCookidooClient:
         with pytest.raises(HTTPError, match="Status code is 606"):
             _ = CookidooClient(source)
 
-        mock_session.assert_called_once_with("GET", f"{source.url}/search/abcd")
+        mock_session.assert_called_once_with("GET", f"{source.url}/search/abcd", timeout=CookidooClient.DEFAULT_TIMEOUT)
 
     def test_get_recipe(self, cookidoo_client, mock_session):
         cookidoo_client.get_recipe("r1234")
         mock_session.assert_called_once_with(
-            "GET", f"{cookidoo_client.url}/recipes/recipe/{cookidoo_client.locale}/r1234"
+            "GET",
+            f"{cookidoo_client.url}/recipes/recipe/{cookidoo_client.locale}/r1234",
+            timeout=CookidooClient.DEFAULT_TIMEOUT,
         )
 
     def test_search(self, cookidoo_client):
@@ -115,3 +128,45 @@ class TestCookidooClient:
         # request should be called multiple times (sorts + ratings + categories)
         # 6 sort_by * 2 orders = 12, 5 ratings, 2 categories -> 19 calls
         assert mock_request.call_count == 12 + 5 + 2
+
+    def test_get_country_recipes_uses_cache_on_second_call(self, cookidoo_client):
+        cookidoo_client._process_recipe_ids = lambda data: {r["id"] for r in data["data"]}
+        cookidoo_client._get_all_categories = lambda: ["cat1"]
+        mock_data = {"data": [{"id": "r1"}]}
+
+        with patch.object(cookidoo_client, "request", return_value=MagicMock(json=lambda: mock_data)) as mock_request:
+            first = cookidoo_client.get_country_recipes("pt")
+            second = cookidoo_client.get_country_recipes("pt")
+
+        assert first == second == {"r1"}
+        # Second call should be served from cache - no extra requests fired.
+        assert mock_request.call_count == 6 * 2 + 5 + 1
+
+    def test_get_country_recipes_use_cache_false_bypasses_cache(self, cookidoo_client):
+        cookidoo_client._process_recipe_ids = lambda data: {r["id"] for r in data["data"]}
+        cookidoo_client._get_all_categories = lambda: ["cat1"]
+        mock_data = {"data": [{"id": "r1"}]}
+        calls_per_fetch = 6 * 2 + 5 + 1
+
+        with patch.object(cookidoo_client, "request", return_value=MagicMock(json=lambda: mock_data)) as mock_request:
+            cookidoo_client.get_country_recipes("pt", use_cache=False)
+            cookidoo_client.get_country_recipes("pt", use_cache=False)
+
+        assert mock_request.call_count == calls_per_fetch * 2
+
+    def test_get_country_recipes_populates_per_category_cache(self, cookidoo_client):
+        cookidoo_client._get_all_categories = lambda: ["cat1", "cat2"]
+
+        def fake_request(method, endpoint, params=None, **kwargs):
+            category = params.get("categories") if params else None
+            ids = {"cat1": [{"id": "r1"}], "cat2": [{"id": "r2"}]}.get(category, [])
+            return MagicMock(json=lambda: {"data": ids})
+
+        with patch.object(cookidoo_client, "request", side_effect=fake_request):
+            cookidoo_client.get_country_recipes("pt")
+
+        assert cookidoo_client.get_category_recipes("pt", "cat1") == {"r1"}
+        assert cookidoo_client.get_category_recipes("pt", "cat2") == {"r2"}
+
+    def test_get_category_recipes_returns_none_when_not_cached(self, cookidoo_client):
+        assert cookidoo_client.get_category_recipes("pt", "cat1") is None

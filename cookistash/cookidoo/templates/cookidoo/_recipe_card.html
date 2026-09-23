@@ -1,7 +1,10 @@
-<div class="card" id="recipe-card-{{ recipe.id }}">
-    <a href="{% url 'cookidoo:recipe_detail' recipe.id %}" class="card-image">
+<div class="card skeleton-loading" id="recipe-card-{{ recipe.id }}">
+    <a href="{% url 'cookidoo:recipe_detail' recipe.id %}" class="card-image{% if recipe.image_url %} img-loading{% endif %}">
         {% if recipe.image_url %}
-            <img src="{{ recipe.image_url }}" alt="{{ recipe.name }}" loading="lazy">
+            <span class="img-skeleton" aria-hidden="true"></span>
+            <img
+                src="{{ recipe.image_url }}" alt="{{ recipe.name }}" loading="lazy"
+                onload="this.closest('.card-image').classList.remove('img-loading')">
         {% else %}
             <div class="card-image-placeholder">🍽️</div>
         {% endif %}
@@ -42,7 +45,7 @@
             hx-post="{% url 'cookidoo:recipe_rescrape' recipe.id %}"
             hx-target="#recipe-card-{{ recipe.id }}"
             hx-swap="outerHTML"
-            hx-indicator="#spinner-{{ recipe.id }}">
+            hx-indicator="closest .skeleton-loading">
             <span class="btn-spinner htmx-indicator" id="spinner-{{ recipe.id }}"></span>
             ↻ Re-scrape
         </button>
@@ -51,7 +54,7 @@
             hx-post="{% url 'cookidoo:recipe_send_to_mealie' recipe.id %}"
             hx-target="#recipe-card-{{ recipe.id }}"
             hx-swap="outerHTML"
-            hx-indicator="#spinner-mealie-{{ recipe.id }}"
+            hx-indicator="closest .skeleton-loading"
             {% if not latest_scrape or not latest_scrape.success %}disabled{% endif %}>
             <span class="btn-spinner htmx-indicator" id="spinner-mealie-{{ recipe.id }}"></span>
             → Send to Mealie

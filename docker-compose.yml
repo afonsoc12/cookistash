@@ -69,7 +69,14 @@ services:
       DB_PASSWORD: postgres
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: django-db
+      REDIS_CACHE_URL: redis://redis:6379/1
       COOKIDOO_EXPLORE_URL: https://cookidoo.pt/foundation/pt-PT/explore
+      # Persisted, mounted-volume path for runtime-generated state (right
+      # now: the auto-generated SECRET_KEY, see cookistash/settings.py) that
+      # must survive the container being replaced on every image upgrade -
+      # /app itself is the image's own ephemeral layer, recreated fresh on
+      # every `docker compose pull && up`, so it can't be used for this.
+      DATA_DIR: /data
       # Optional - Mealie sync only activates once these are set. Generate
       # MEALIE_API_TOKEN in Mealie's UI (Profile > API Tokens) after first
       # login, see README.
@@ -84,3 +91,4 @@ services:
         condition: service_healthy
     volumes:
       - ./tmp/docker-data/app-logs:/var/log/supervisor
+      - ./tmp/docker-data/app-data:/data

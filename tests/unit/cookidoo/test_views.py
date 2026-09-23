@@ -28,8 +28,23 @@ def recipe(source):
 
 
 class TestDiscover:
+    def test_first_load_is_an_instant_shell_no_query(self, client):
+        # A plain (non-htmx) GET is the very first page navigation - it
+        # should render instantly without ever calling the live Cookidoo
+        # search API, and hx-trigger="load" (baked into the shell HTML)
+        # is what fetches the real results afterwards.
+        Source.objects.create(name="S", url="https://example.com", locale="en-GB")
+        with patch("cookistash.cookidoo.views.CookidooClient.search") as mock_search:
+            resp = client.get(reverse("cookidoo:discover"))
+
+        assert resp.status_code == 200
+        assert resp.context["shell"] is True
+        assert "results" not in resp.context
+        mock_search.assert_not_called()
+        assert b'hx-trigger="load"' in resp.content
+
     def test_no_source_configured(self, client):
-        resp = client.get(reverse("cookidoo:discover"))
+        resp = client.get(reverse("cookidoo:discover"), HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
         assert resp.context["has_cookidoo_source"] is False
         assert resp.context["results"] == []
@@ -47,7 +62,7 @@ class TestDiscover:
             patch("cookistash.cookidoo.views.CookidooClient.test", return_value=True),
             patch("cookistash.cookidoo.views.CookidooClient.search", return_value=mock_results),
         ):
-            resp = client.get(reverse("cookidoo:discover"), {"category": "cat1"})
+            resp = client.get(reverse("cookidoo:discover"), {"category": "cat1"}, HTTP_HX_REQUEST="true")
 
         assert resp.status_code == 200
         by_id = {r["id"]: r for r in resp.context["results"]}
@@ -57,7 +72,7 @@ class TestDiscover:
     def test_fetch_error_is_surfaced_not_raised(self, client):
         Source.objects.create(name="S", url="https://example.com", locale="en-GB")
         with patch("cookistash.cookidoo.views.CookidooClient.__init__", side_effect=Exception("boom")):
-            resp = client.get(reverse("cookidoo:discover"))
+            resp = client.get(reverse("cookidoo:discover"), HTTP_HX_REQUEST="true")
 
         assert resp.status_code == 200
         assert "boom" in resp.context["fetch_error"]
@@ -68,7 +83,7 @@ class TestDiscover:
             patch("cookistash.cookidoo.views.CookidooClient.test", return_value=True),
             patch("cookistash.cookidoo.views.CookidooClient.search", return_value=[]) as mock_search,
         ):
-            resp = client.get(reverse("cookidoo:discover"))
+            resp = client.get(reverse("cookidoo:discover"), HTTP_HX_REQUEST="true")
 
         assert resp.context["country"] == "pt"
         mock_search.assert_called_once_with(category=None, country="pt", query=None, page=0, limit=24)
@@ -79,7 +94,7 @@ class TestDiscover:
             patch("cookistash.cookidoo.views.CookidooClient.test", return_value=True),
             patch("cookistash.cookidoo.views.CookidooClient.search", return_value=[]) as mock_search,
         ):
-            resp = client.get(reverse("cookidoo:discover"), {"country": ""})
+            resp = client.get(reverse("cookidoo:discover"), {"country": ""}, HTTP_HX_REQUEST="true")
 
         assert resp.context["country"] == ""
         mock_search.assert_called_once_with(category=None, country=None, query=None, page=0, limit=24)
@@ -105,10 +120,43 @@ class TestDiscoverImport:
         messages = list(resp.context["messages"])
         assert any("scrape failed" in str(m) for m in messages)
 
+    def test_htmx_request_renders_content_partial_only(self, client):
+        # hx-post from the "Scrape" button on a Discover result card - see
+        # _discover_content.html - should swap in just #discover-content,
+        # not a whole new <html> document.
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:discover_import", args=["r99"]), {}, HTTP_HX_REQUEST="true")
+
+        assert "cookidoo/_discover_content.html" in [t.name for t in resp.templates]
+        assert b"<!DOCTYPE html>" not in resp.content
+
+    def test_non_htmx_request_renders_full_page(self, client):
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:discover_import", args=["r99"]), {})
+
+        assert "cookidoo/discover.html" in [t.name for t in resp.templates]
+        assert b"<!DOCTYPE html>" in resp.content
+
 
 class TestRecipeList:
+    def test_first_load_is_an_instant_shell_no_query(self, client, recipe):
+        # A plain (non-htmx) GET is the very first page navigation - it
+        # should render instantly without touching the recipes table at
+        # all; hx-trigger="load" (baked into the shell HTML) is what fetches
+        # the real list afterwards.
+        with patch("cookistash.cookidoo.views.Recipe.objects.all") as mock_all:
+            resp = client.get(reverse("cookidoo:recipe_list"))
+
+        assert resp.status_code == 200
+        assert resp.context["shell"] is True
+        assert "rows" not in resp.context
+        mock_all.assert_not_called()
+        assert b'hx-trigger="load"' in resp.content
+
     def test_empty_state(self, client):
-        resp = client.get(reverse("cookidoo:recipe_list"))
+        resp = client.get(reverse("cookidoo:recipe_list"), HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
         assert list(resp.context["page"].object_list) == []
         assert resp.context["has_cookidoo_source"] is False
@@ -124,7 +172,7 @@ class TestRecipeList:
             publication_date=datetime.now(),
             source=source,
         )
-        resp = client.get(reverse("cookidoo:recipe_list"))
+        resp = client.get(reverse("cookidoo:recipe_list"), HTTP_HX_REQUEST="true")
         ids = [r["recipe"].id for r in resp.context["rows"]]
         assert set(ids) == {recipe.id, other.id}
 
@@ -138,7 +186,7 @@ class TestRecipeList:
             publication_date=datetime.now(),
             source=source,
         )
-        resp = client.get(reverse("cookidoo:recipe_list"), {"q": "gazp"})
+        resp = client.get(reverse("cookidoo:recipe_list"), {"q": "gazp"}, HTTP_HX_REQUEST="true")
         ids = [r["recipe"].id for r in resp.context["rows"]]
         assert ids == ["r123"]
         assert resp.context["query"] == "gazp"
@@ -147,7 +195,7 @@ class TestRecipeList:
         from cookistash.mealie.models import Source as MealieSource
 
         MealieSource.objects.create(name="M", api_url="https://mealie.example.com", api_token="t")
-        resp = client.get(reverse("cookidoo:recipe_list"))
+        resp = client.get(reverse("cookidoo:recipe_list"), HTTP_HX_REQUEST="true")
         assert resp.context["has_mealie_source"] is True
 
 
@@ -253,6 +301,25 @@ class TestRecipeScrapeNew:
             resp = client.post(reverse("cookidoo:recipe_scrape_new"), {"recipe_id": "r123456"}, follow=True)
         messages = list(get_messages_for(resp))
         assert any("Scrape of r123456 failed" in str(m) for m in messages)
+
+    def test_htmx_request_renders_content_partial_only(self, client, source):
+        # hx-post from the "Scrape" add-recipe form - see
+        # _recipe_list_content.html - should swap in just
+        # #recipe-list-content, not a whole new <html> document.
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:recipe_scrape_new"), {"recipe_id": "r123456"}, HTTP_HX_REQUEST="true")
+
+        assert "cookidoo/_recipe_list_content.html" in [t.name for t in resp.templates]
+        assert b"<!DOCTYPE html>" not in resp.content
+
+    def test_non_htmx_request_renders_full_page(self, client, source):
+        with patch("cookistash.cookidoo.views.scrape_recipe.apply") as mock_apply:
+            mock_apply.return_value.get.return_value = "task-id"
+            resp = client.post(reverse("cookidoo:recipe_scrape_new"), {"recipe_id": "r123456"})
+
+        assert "cookidoo/recipe_list.html" in [t.name for t in resp.templates]
+        assert b"<!DOCTYPE html>" in resp.content
 
 
 class TestRecipeRescrape:

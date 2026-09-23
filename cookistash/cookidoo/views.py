@@ -71,10 +71,22 @@ def _recipe_context(recipe, action_error=None):
     }
 
 
+def _is_htmx(request):
+    return request.headers.get("HX-Request") == "true"
+
+
 def recipe_list(request):
     from cookistash.mealie.models import Source as MealieSource
 
     query = request.GET.get("q", "").strip()
+
+    if not _is_htmx(request):
+        # Instant shell: render the skeleton immediately without touching the
+        # DB - _recipe_list_content.html's hx-trigger="load" fires straight
+        # back at this same view (now as an htmx request) to fetch the real
+        # content and swap it in.
+        return render(request, "cookidoo/recipe_list.html", {"query": query, "shell": True})
+
     recipes = Recipe.objects.all().order_by("-last_scraped_at", "name")
     if query:
         recipes = recipes.filter(name__icontains=query)
@@ -84,15 +96,19 @@ def recipe_list(request):
 
     rows = [_recipe_context(r) for r in page.object_list]
 
+    # Both the initial hx-trigger="load" fetch and the search/add-recipe/
+    # pagination htmx actions land here - always render just the fragment
+    # (see _recipe_list_content.html), never the full page, for htmx.
     return render(
         request,
-        "cookidoo/recipe_list.html",
+        "cookidoo/_recipe_list_content.html",
         {
             "page": page,
             "rows": rows,
             "query": query,
             "has_cookidoo_source": Source.objects.exists(),
             "has_mealie_source": MealieSource.objects.exists(),
+            "shell": False,
         },
     )
 
@@ -132,8 +148,38 @@ def discover(request):
     """POC: browse Cookidoo's own catalog by category and import from there,
     instead of needing a recipe ID/link up front.
     """
-    source = Source.objects.first()
     category = request.GET.get("category", "")
+    query = request.GET.get("q", "").strip()
+    page = int(request.GET.get("page", 0))
+
+    if not _is_htmx(request):
+        # Instant shell: skip the live Cookidoo search entirely (the slow
+        # part) and render the skeleton immediately - _discover_content.html's
+        # hx-trigger="load" fires straight back at this same view (now as an
+        # htmx request) to run the real search and swap it in. Still need a
+        # cheap local Source lookup for has_cookidoo_source/default country -
+        # that's not the expensive bit.
+        source = Source.objects.first()
+        if "country" in request.GET:
+            country = request.GET.get("country", "")
+        else:
+            country = source.country if source else ""
+        return render(
+            request,
+            "cookidoo/discover.html",
+            {
+                "categories": CATEGORIES,
+                "countries": COUNTRIES,
+                "category": category,
+                "country": country,
+                "query": query,
+                "page": page,
+                "has_cookidoo_source": source is not None,
+                "shell": True,
+            },
+        )
+
+    source = Source.objects.first()
     # "country" absent entirely (first visit) defaults to the configured
     # source's own market; an explicit "?country=" (including empty, from
     # picking "All countries") always wins.
@@ -141,8 +187,6 @@ def discover(request):
         country = request.GET.get("country", "")
     else:
         country = source.country if source else ""
-    query = request.GET.get("q", "").strip()
-    page = int(request.GET.get("page", 0))
 
     results = []
     fetch_error = None
@@ -162,9 +206,12 @@ def discover(request):
         if source:
             r["cookidoo_url"] = f"{source.url}recipes/recipe/{source.locale}/{r['id']}"
 
+    # Both the initial hx-trigger="load" fetch and the search/import/
+    # pagination htmx actions land here - always render just the fragment
+    # (see _discover_content.html), never the full page, for htmx.
     return render(
         request,
-        "cookidoo/discover.html",
+        "cookidoo/_discover_content.html",
         {
             "categories": CATEGORIES,
             "countries": COUNTRIES,
@@ -175,6 +222,7 @@ def discover(request):
             "results": results,
             "fetch_error": fetch_error,
             "has_cookidoo_source": source is not None,
+            "shell": False,
         },
     )
 

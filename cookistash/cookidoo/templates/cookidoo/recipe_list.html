@@ -8,60 +8,7 @@
     {% include "cookidoo/_topbar.html" with active="recipes" %}
 
     <div class="wrap">
-        {% if not has_cookidoo_source or not has_mealie_source %}
-            <div class="banner banner-warn">
-                ⚠ Setup needed:
-                {% if not has_cookidoo_source %}no <strong>Cookidoo source</strong> — set <code>COOKIDOO_EXPLORE_URL</code>.{% endif %}
-                {% if not has_mealie_source %}no default <strong>Mealie source</strong> — <a href="/admin/mealie/source/add/">add one</a> (needs a Mealie API token).{% endif %}
-            </div>
-        {% endif %}
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="banner {% if message.tags == 'error' %}banner-error{% else %}banner-success{% endif %}">
-                    {% if message.tags == 'error' %}✕{% else %}✓{% endif %} {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-
-        <div class="toolbar">
-            <div class="toolbar-card">
-                <p class="toolbar-label">Search recipes</p>
-                <form method="get" class="input-row">
-                    <input type="search" name="q" value="{{ query }}" placeholder="Search by name…">
-                    <button type="submit" class="btn btn-outline">Search</button>
-                </form>
-            </div>
-            <div class="toolbar-card">
-                <p class="toolbar-label">Add a recipe</p>
-                <form method="post" action="{% url 'cookidoo:recipe_scrape_new' %}" class="input-row">
-                    {% csrf_token %}
-                    <input type="text" name="recipe_id" placeholder="Paste a Cookidoo link or ID (r123456)" required>
-                    <button type="submit" class="btn btn-primary">Scrape</button>
-                </form>
-            </div>
-        </div>
-
-        {% if rows %}
-            <div class="grid" id="recipe-grid">
-                {% for row in rows %}
-                    {% include "cookidoo/_recipe_card.html" with recipe=row.recipe latest_scrape=row.latest_scrape mealie_recipe=row.mealie_recipe mealie_recipe_url=row.mealie_recipe_url %}
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="empty-state">
-                🥘 No recipes yet — paste a Cookidoo link above to scrape your first one.
-            </div>
-        {% endif %}
-
-        {% if page.paginator.num_pages > 1 %}
-            <div class="pagination">
-                {% if page.has_previous %}<a href="?q={{ query }}&page={{ page.previous_page_number }}">← Prev</a>{% endif %}
-                <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
-                {% if page.has_next %}<a href="?q={{ query }}&page={{ page.next_page_number }}">Next →</a>{% endif %}
-            </div>
-        {% endif %}
-
+        {% include "cookidoo/_recipe_list_content.html" %}
         {% include "cookidoo/_footer.html" %}
     </div>
 </body>

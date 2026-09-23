@@ -51,10 +51,17 @@ _NUTRITION_KEY_MAP = {
 
 
 def _build_nutrition(nutrition_groups):
-    try:
-        entries = nutrition_groups[0]["recipeNutritions"][0]["nutritions"]
-    except IndexError, KeyError, TypeError:
+    # Avoid a multi-exception `except (A, B, C):` here - ruff-format 0.15.2
+    # (and 0.16.8, still) mangles that into the invalid-looking-but-still-
+    # parses-as-Python-2-style `except A, B, C:` on every format run (see the
+    # same note in cookidoo/admin.py). Walking the structure with .get()
+    # instead sidesteps the bug rather than fighting the formatter.
+    if not nutrition_groups:
         return {}
+    recipe_nutritions = nutrition_groups[0].get("recipeNutritions") or []
+    if not recipe_nutritions:
+        return {}
+    entries = recipe_nutritions[0].get("nutritions") or []
     result = {}
     for entry in entries:
         mealie_key = _NUTRITION_KEY_MAP.get(entry["type"])

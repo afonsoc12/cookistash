@@ -1,6 +1,7 @@
 import logging
 from urllib.parse import urljoin
 
+from django.core.cache import cache
 from requests import Session
 from requests.exceptions import HTTPError
 
@@ -65,6 +66,12 @@ IMAGE_TRANSFORMATION = "t_web_rdp_recipe_584x480_1_5x"
 
 
 class CookidooClient(Session):
+    # Every scrape/search runs synchronously inside a request or eager-Celery
+    # thread (see views.py, tasks.py) - without a timeout, a hung upstream
+    # connection would block that thread indefinitely instead of surfacing
+    # as a retryable error.
+    DEFAULT_TIMEOUT = 15
+
     DEFAULT_HEADERS = {
         "Accept": "application/json",
         "Accept-Encoding": "gzip, deflate, br, zstd",
@@ -85,6 +92,7 @@ class CookidooClient(Session):
     def request(self, method, endpoint, *args, **kwargs):  # type: ignore[override]
         if endpoint.startswith("/") or endpoint.endswith("/"):
             raise ValueError("Endpoint must not start or end with '/'")
+        kwargs.setdefault("timeout", self.DEFAULT_TIMEOUT)
         req = super().request(method, urljoin(self.url, endpoint), *args, **kwargs)
         try:
             req.raise_for_status()
@@ -126,12 +134,25 @@ class CookidooClient(Session):
                 r["image"] = r["image"].format(transformation=IMAGE_TRANSFORMATION)
         return results
 
-    def get_country_recipes(self, country):
+    # Cache TTL for get_country_recipes(). It fans out into 30+ sequential
+    # Cookidoo requests (see below) to work around the API's 1000-result cap
+    # per query - expensive to redo, and a country's full recipe-id catalog
+    # changes slowly (new recipes trickle in, nothing existing disappears),
+    # so a long TTL is safe for a personal/low-traffic deploy.
+    RECIPE_IDS_CACHE_TTL = 60 * 60 * 24 * 90  # ~3 months
+
+    def get_country_recipes(self, country, use_cache=True):
         """Retrieves all Recipe IDs for a country
 
         A limitation of the API is that it can only retrieve a maximum of 1000 requests.
         To bypass this, use multiple filter rules to fetch all recipes available
         """
+        cache_key = f"cookidoo:recipe_ids:{self.locale}:{country}"
+        if use_cache:
+            cached = cache.get(cache_key)
+            if cached is not None:
+                return cached
+
         recipe_ids = set()
 
         # Use sort by filters
@@ -174,7 +195,11 @@ class CookidooClient(Session):
             logger.debug(f"Found {len(processed_recipe_ids)} for rating {rating}")
             recipe_ids.update(processed_recipe_ids)
 
-        # Use categories
+        # Use categories - also cache each category's own subset (not just
+        # the country-wide union above) as a side effect of a request we're
+        # already making, so a future per-category lookup doesn't need its
+        # own crawl. Unlike the union, this is a genuine partition: every id
+        # here was found *because* it's tagged with that category.
         for cat in self._get_all_categories():
             result = self.request(
                 "GET",
@@ -189,9 +214,26 @@ class CookidooClient(Session):
             processed_recipe_ids = self._process_recipe_ids(result.json())
             logger.debug(f"Found {len(processed_recipe_ids)} for category '{cat}'")
             recipe_ids.update(processed_recipe_ids)
+            if use_cache:
+                cache.set(
+                    self._category_cache_key(country, cat), processed_recipe_ids, timeout=self.RECIPE_IDS_CACHE_TTL
+                )
 
         logger.debug(f"Found {len(recipe_ids)} unique recipes for country {country}")
+        if use_cache:
+            cache.set(cache_key, recipe_ids, timeout=self.RECIPE_IDS_CACHE_TTL)
         return recipe_ids
+
+    def _category_cache_key(self, country, category):
+        return f"cookidoo:recipe_ids:{self.locale}:{country}:{category}"
+
+    def get_category_recipes(self, country, category):
+        """Cached recipe ids for one (country, category) pair, populated the
+        next time get_country_recipes(country) runs - returns None if that
+        hasn't happened yet (there's no cheap way to populate just one
+        category without doing the fuller crawl anyway).
+        """
+        return cache.get(self._category_cache_key(country, category))
 
     def _process_recipe_ids(self, data):
         return {r["id"] for r in data["data"]}

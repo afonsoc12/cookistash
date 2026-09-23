@@ -138,6 +138,55 @@ select:focus { outline: none; border-color: var(--primary); background: var(--ca
 .htmx-request.htmx-indicator, .htmx-request .htmx-indicator { display: inline-block; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Skeleton loading state - opt-in wrapper class for any card/hero/listing
+   container whose action buttons or hx-trigger="load" shell live inside it
+   (see _recipe_card.html, _recipe_hero.html, _recipe_list_content.html,
+   _discover_content.html). Driven by htmx's own .htmx-request class - no
+   custom JS/forced delay needed, it's added right before the request and
+   removed right as the (undelayed) swap happens, so visible duration always
+   matches the real request. For an instant first-load shell, the server
+   renders this class directly in the initial HTML (see the `shell` context
+   flag) so it's active from first paint, before any htmx request exists. */
+.skeleton-loading { position: relative; }
+.skeleton-loading.htmx-request { pointer-events: none; }
+.skeleton-loading.htmx-request > * { opacity: 0.35; filter: grayscale(0.4); transition: opacity 0.15s ease; }
+.skeleton-loading.htmx-request .btn-spinner { display: inline-block; }
+.skeleton-loading.htmx-request::after {
+    content: "";
+    position: absolute; inset: 0; border-radius: inherit;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.1s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Ghost-card grid (see _skeleton_grid.html) - shown in place of the actual
+   results grid/empty-state/pagination (marked .real-content) while a
+   listing container is .htmx-request, instead of just dimming stale
+   results. Hidden by default; both classes live inside a .skeleton-loading
+   wrapper so this only ever activates alongside that container's own
+   dim+shimmer. */
+/* .grid.skeleton-grid (not just .skeleton-grid) so this reliably beats the
+   .grid { display: grid; ... } rule below regardless of source order - two
+   classes outrank one at equal specificity either way, instead of relying
+   on which happens to come later in the file. */
+.grid.skeleton-grid { display: none; }
+.skeleton-loading.htmx-request .real-content { display: none; }
+.skeleton-loading.htmx-request .grid.skeleton-grid { display: grid; opacity: 1; filter: none; }
+.skeleton-card {
+    background: var(--card-bg); border-radius: var(--radius); overflow: hidden;
+    box-shadow: var(--shadow); border: 1px solid var(--border);
+}
+.skeleton-card .skeleton-img { aspect-ratio: 4/3; background: var(--border); }
+.skeleton-card .skeleton-body { padding: 16px; }
+.skeleton-line { height: 12px; background: var(--border); border-radius: 6px; margin-bottom: 10px; }
+.skeleton-line.w-80 { width: 80%; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-40 { width: 40%; }
+
 /* Grid + cards (recipe list + discover) */
 .grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -158,6 +207,35 @@ select:focus { outline: none; border-color: var(--primary); background: var(--ca
 .card-image { position: relative; aspect-ratio: 4/3; background: var(--bg); overflow: hidden; display: block; }
 .card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; opacity: 0.3; }
+
+/* Per-image skeleton (see _discover_content.html, _recipe_card.html,
+   _recipe_hero.html) - recipe/result images are remote Cookidoo URLs, not
+   local static assets, so they can still be downloading well after the
+   card's own HTML has already swapped in. The .img-skeleton overlay (+
+   shimmer) covers the image until its onload handler removes .img-loading
+   from the wrapping element, so nothing ever flashes blank/broken, or shows
+   its title/link text with no visual loading cue, before the photo is
+   actually ready. Not scoped to .card-image specifically - any wrapper with
+   position:relative + .img-loading works (see .hero-image-wrap). */
+.img-loading { position: relative; }
+/* transition lives on the bare `img` selector (unconditional) rather than
+   `.img-loading img` - if it were gated by the same ancestor class that
+   controls opacity, both would vanish in the same reflow when .img-loading
+   is removed on load, and opacity would snap straight to 1 instead of
+   fading in. */
+img { transition: opacity 0.2s ease; }
+.img-loading img { opacity: 0; }
+.img-skeleton { display: none; }
+.img-loading .img-skeleton {
+    display: block; position: absolute; inset: 0; background: var(--border); overflow: hidden;
+}
+.img-loading .img-skeleton::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.1s ease-in-out infinite;
+}
 .card-body { padding: 16px 16px 4px; flex: 1; }
 .card-title { font-size: 1.02rem; font-weight: 700; margin: 0 0 4px; line-height: 1.3; letter-spacing: -0.01em; }
 .card-title a { color: inherit; text-decoration: none; }

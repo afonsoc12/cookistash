@@ -241,6 +241,12 @@ class Ingredient(ModelMealieApi):
 class Recipe(ModelMealieApi):
     """Normalized Mealie-compatible recipe"""
 
+    # `slug` (below), not `id`, is this model's Django pk/local identity -
+    # it's derived from the Cookidoo recipe id in save() so both systems
+    # share one lookup key. `id` instead mirrors Mealie's own server-assigned
+    # uuid for this recipe (learned once created there, see
+    # MealieClient.create_or_update_recipe) - it exists purely so API
+    # payloads can carry Mealie's real id, not to identify the row locally.
     id = models.UUIDField(unique=True, null=True, editable=False)
     slug = models.SlugField(primary_key=True, editable=False)
     mealie_slug = models.SlugField(

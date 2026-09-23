@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class MealieClient(Session):
+    # Same reasoning as CookidooClient.DEFAULT_TIMEOUT - these calls run
+    # synchronously on a request or eager-Celery thread, so an unbounded
+    # request would block it indefinitely.
+    DEFAULT_TIMEOUT = 15
+
     DEFAULT_HEADERS = {"Accept": "application/json"}
     API_ENDPOINT = "api/"
 
@@ -28,6 +33,7 @@ class MealieClient(Session):
     def _request(self, method, endpoint, *args, **kwargs):
         if endpoint.startswith("/") or endpoint.endswith("/"):
             raise ValueError("Endpoint must not start or end with '/'")
+        kwargs.setdefault("timeout", self.DEFAULT_TIMEOUT)
         req = super().request(
             method,
             urljoin(urljoin(self.url, self.API_ENDPOINT), endpoint),
@@ -44,15 +50,6 @@ class MealieClient(Session):
         """Raises if status_code is not 2xx."""
         _ = self._request("GET", "app/about")
         return True
-
-    def parse_response(self, response):
-        if response.status_code in (
-            200,
-            201,
-        ):
-            return response.json(), response.status_code
-        else:
-            return None, response.status_code
 
     def _find_by_name(self, endpoint, name):
         # Case-insensitive: Mealie's own uniqueness constraint on these
