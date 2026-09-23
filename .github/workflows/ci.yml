@@ -4,8 +4,6 @@ concurrency: CI
 
 on:
   push:
-    branches-ignore:
-      - master
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -13,26 +11,8 @@ on:
 jobs:
   ci:
     name: 🔍 Lint, Type Check & Test
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:18-trixie
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DB_HOST: localhost
-      DB_NAME: cookistash
-      DB_USER: postgres
-      DB_PASSWORD: postgres
 
     steps:
       - name: 📥 Checkout
@@ -51,9 +31,6 @@ jobs:
       - name: 📦 Install dependencies
         run: uv sync --locked --all-groups
 
-      - name: 🗄️ Create test database
-        run: PGPASSWORD=postgres psql -h localhost -U postgres -c "CREATE DATABASE cookistash;"
-
       - name: 🔎 ruff format
         run: uv run ruff format --check
 
@@ -66,35 +43,67 @@ jobs:
       - name: ✅ Run unit tests (with coverage)
         run: uv run pytest -m "not e2e"
 
-      - name: 📊 Upload coverage report
+      - name: 📊 Upload coverage report (artifact)
         if: always()
+        id: upload-coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: |
-            htmlcov/
-            coverage.xml
+            build/htmlcov/
+            build/coverage.xml
           retention-days: 14
 
-  build:
-    name: 🐳 Build container
-    runs-on: ubuntu-latest
-    needs: ci
-
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v6
-
-      - name: 🐳 Build image
-        uses: docker/build-push-action@v6
+      - name: ☁️ Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
         with:
-          context: .
-          push: false
-          tags: cookistash:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          files: build/coverage.xml
+          fail_ci_if_error: false
 
-      - name: 📏 Report image size
+      - name: 📝 Coverage summary
+        if: always()
         run: |
-          SIZE=$(docker image inspect cookistash:ci --format='{{.Size}}')
-          echo "Image size: $SIZE bytes ($((SIZE / 1048576)) MB)"
+          set -euo pipefail
+
+          PCT="$(uv run coverage report --format=total 2>/dev/null)"
+          THRESHOLD=90
+          ARTIFACT_URL="${{ steps.upload-coverage.outputs.artifact-url }}"
+          CODECOV_URL="https://codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }}"
+
+          if [ "$PCT" -ge "$THRESHOLD" ]; then
+            BADGE="https://img.shields.io/badge/coverage-${PCT}%25-brightgreen?style=for-the-badge&logo=codecov&logoColor=white"
+            VERDICT="✅ **Met** the ${THRESHOLD}% minimum"
+          else
+            BADGE="https://img.shields.io/badge/coverage-${PCT}%25-red?style=for-the-badge&logo=codecov&logoColor=white"
+            VERDICT="❌ **Below** the ${THRESHOLD}% minimum"
+          fi
+
+          {
+            echo "## 🧪 Code Coverage"
+            echo
+            echo "![coverage](${BADGE})"
+            echo
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Total coverage | **${PCT}%** |"
+            echo "| Required minimum | ${THRESHOLD}% (\`fail_under\` in \`pyproject.toml\`) |"
+            echo "| Verdict | ${VERDICT} |"
+            echo
+            echo "<details>"
+            echo "<summary>📁 Per-file breakdown</summary>"
+            echo
+            uv run coverage report --format=markdown 2>/dev/null
+            echo
+            echo "</details>"
+            echo
+            echo "### 📦 Artifacts"
+            echo
+            echo "| Report | Link |"
+            echo "|---|---|"
+            echo "| 🌐 Interactive HTML coverage report | [\`build/htmlcov/\`](${ARTIFACT_URL}) |"
+            echo "| 📄 XML coverage report (for external tooling) | [\`build/coverage.xml\`](${ARTIFACT_URL}) |"
+            echo "| ☁️ Codecov (trends, sunburst, PR diff coverage) | [codecov.io](${CODECOV_URL}) |"
+            echo
+            echo "> Artifact retention: 14 days"
+          } >> "$GITHUB_STEP_SUMMARY"
