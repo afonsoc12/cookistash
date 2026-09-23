@@ -12,6 +12,12 @@ pytestmark = pytest.mark.django_db
 
 
 class TestModelMealieApi:
+    # Dynamically creates/drops a table via schema_editor in `concrete_model`
+    # below - needs its own (non-atomic) transaction, since SQLite refuses
+    # DDL with FK checks enabled inside the transaction pytest-django's
+    # default `django_db` marker wraps every test in.
+    pytestmark = pytest.mark.django_db(transaction=True)
+
     @pytest.fixture
     def concrete_model(self, django_db_blocker):
         """

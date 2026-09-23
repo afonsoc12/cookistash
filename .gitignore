@@ -1,6 +1,10 @@
 # .env
 .env
 
+# Auto-generated Django SECRET_KEY (see cookistash/settings.py) - unique per
+# install, never meant to be shared/committed.
+.secret_key
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -26,7 +30,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-.ruff_cache/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -39,18 +42,13 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
 .cache
 nosetests.xml
-coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
-.pytest_cache/
 .planning/
 
 # Translations
@@ -121,7 +119,6 @@ data/
 /site
 
 # mypy
-.mypy_cache/
 .dmypy.json
 dmypy.json
 

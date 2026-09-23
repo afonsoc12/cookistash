@@ -11,17 +11,52 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import secrets
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Where runtime-generated state that must outlive a single container gets
+# persisted (right now: just the auto-generated SECRET_KEY below). BASE_DIR
+# (/app in the container) is the image's own layer, recreated fresh on every
+# `docker compose pull && up` - useless for anything meant to survive a
+# version upgrade. docker-compose.yml points this at a bind-mounted volume
+# for exactly that reason; defaults to BASE_DIR for the bare
+# `manage.py runserver` dev path, where the checkout itself is already the
+# persistent thing.
+DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+
+def _get_secret_key() -> str:
+    """SECRET_KEY signs sessions/CSRF tokens - it must be present and it
+    must not be predictable, but for this single-container/no-manual-setup
+    app there's no reason to make the user pick one. If SECRET_KEY isn't set
+    explicitly, generate a random one on first run and persist it in
+    DATA_DIR - stable across container replacements (see DATA_DIR above),
+    gitignored so it's never the same value across installs like a
+    hardcoded default would be.
+    """
+    env_key = os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    key_file = DATA_DIR / ".secret_key"
+    if key_file.exists():
+        return key_file.read_text().strip()
+
+    generated = secrets.token_urlsafe(64)
+    key_file.write_text(generated)
+    return generated
+
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-98^@bq!rg^wqq)iei8+27=sw+r1u+uzd)mfjj(t&mwykp2c$-t")
+SECRET_KEY = _get_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "true").lower() == "true"
@@ -123,16 +158,28 @@ WSGI_APPLICATION = "cookistash.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ.get("DB_NAME", "cookistash"),
-        "USER": os.environ.get("DB_USER", "postgres"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
-        "HOST": os.environ.get("DB_HOST", "localhost"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
+# In-memory SQLite for the unit test suite - either CI=true (set automatically
+# by GitHub Actions, which never runs e2e) or an explicit DB_ENGINE=sqlite3
+# for running the same suite locally without docker-compose. See
+# tests/e2e/README.md for why e2e always keeps the real Postgres below.
+if os.environ.get("CI") == "true" or os.environ.get("DB_ENGINE") == "sqlite3":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ.get("DB_NAME", "cookistash"),
+            "USER": os.environ.get("DB_USER", "postgres"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", "postgres"),
+            "HOST": os.environ.get("DB_HOST", "localhost"),
+            "PORT": os.environ.get("DB_PORT", "5432"),
+        }
+    }
 
 
 # Password validation
@@ -179,6 +226,18 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Cache - reuses the same Redis instance Celery's broker already requires,
+# on a separate logical DB (redis://.../1 vs the broker's .../0) so cache
+# flushes/evictions can never touch broker state or vice versa. Used to
+# avoid re-running expensive, many-request Cookidoo operations (see
+# CookidooClient.get_country_recipes) on every call.
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1"),
+    }
+}
 
 # Celery configs
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")

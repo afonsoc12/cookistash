@@ -5,6 +5,7 @@
 # Cookistash
 
 [![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/release.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=coverage&logo=codecov&logoColor=white)](https://codecov.io/gh/afonsoc12/cookistash)
 [![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
 
 > 🥘 Scrapes recipes from [Cookidoo](https://cookidoo.thermomix.com/) (Bimby/Thermomix) — with optional sync to [Mealie](https://mealie.io/).
@@ -58,10 +59,17 @@ All configuration is via environment variables (see `docker-compose.yml`).
 | `CELERY_BROKER_URL` | Redis broker URL | `redis://localhost:6379/0` |
 | `CELERY_RESULT_BACKEND` | Celery result backend | `django-db` |
 | `DEBUG` | Django debug mode | `true` |
-| `SECRET_KEY` | Django secret key | insecure dev default — **set this in production** |
+| `SECRET_KEY` | Django secret key, signs sessions/CSRF tokens | unset — no need to set this: auto-generated on first run and persisted to `DATA_DIR/.secret_key` |
+| `DATA_DIR` | Where runtime-generated state (currently just `.secret_key`) is persisted - needs to survive the container being replaced on every image upgrade, unlike the rest of `/app` | `/data` in docker-compose (bind-mounted to `./tmp/docker-data/app-data`) / repo root otherwise |
 | `ALLOWED_HOSTS` | Comma-separated allowed hosts | `*` |
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated origins (with scheme, e.g. `https://cookistash.example.com`) trusted for POST requests - needed if you put another reverse proxy in front that doesn't forward the original Host header | unset |
 | `AUTO_ADMIN_LOGIN` | Skip the admin login form, auto-authenticate as the superuser | `true` — **only safe on localhost/private networks**, set `false` if ever exposed |
+
+You don't need to set `SECRET_KEY` yourself (see above), but if you'd rather pin one explicitly, generate a long, cryptographically random one with:
+
+```bash
+openssl rand -hex 64
+```
 
 ## 🖥️ UI
 

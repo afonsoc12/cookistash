@@ -1,4 +1,5 @@
 .venv
+build/
 staticfiles/
 tmp/
 tests_old/
