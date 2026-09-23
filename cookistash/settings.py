@@ -158,11 +158,14 @@ WSGI_APPLICATION = "cookistash.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# In-memory SQLite for the unit test suite - either CI=true (set automatically
-# by GitHub Actions, which never runs e2e) or an explicit DB_ENGINE=sqlite3
-# for running the same suite locally without docker-compose. See
-# tests/e2e/README.md for why e2e always keeps the real Postgres below.
-if os.environ.get("CI") == "true" or os.environ.get("DB_ENGINE") == "sqlite3":
+# In-memory SQLite + LocMemCache for the unit test suite (see CACHES below) -
+# either CI=true (set automatically by GitHub Actions, which never runs e2e)
+# or an explicit DB_ENGINE=sqlite3 for running the same suite locally
+# without docker-compose. See tests/e2e/README.md for why e2e always keeps
+# the real Postgres/Redis below.
+USE_TEST_DOUBLES = os.environ.get("CI") == "true" or os.environ.get("DB_ENGINE") == "sqlite3"
+
+if USE_TEST_DOUBLES:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -231,13 +234,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # on a separate logical DB (redis://.../1 vs the broker's .../0) so cache
 # flushes/evictions can never touch broker state or vice versa. Used to
 # avoid re-running expensive, many-request Cookidoo operations (see
-# CookidooClient.get_country_recipes) on every call.
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1"),
+# CookidooClient.get_country_recipes) on every call. Unit tests use
+# LocMemCache instead (see USE_TEST_DOUBLES above) - no real Redis needed.
+if USE_TEST_DOUBLES:
+    CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://localhost:6379/1"),
+        }
     }
-}
 
 # Celery configs
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
