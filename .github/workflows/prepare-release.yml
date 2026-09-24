@@ -21,7 +21,7 @@ on:
 
 jobs:
   prepare-release:
-    name: 🏷️ Bump version, changelog & tag
+    name: 🏷️ Prepare Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
