@@ -82,13 +82,35 @@ jobs:
 
       - name: 📝 Job summary
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+          BADGE="https://img.shields.io/badge/prepared-${TAG}-blue?style=for-the-badge&logo=git&logoColor=white"
+
           {
-            echo "## 🏷️ Release v${{ steps.version.outputs.version }} prepared"
+            echo "## 🏷️ Release ${TAG} Prepared"
             echo
-            echo "Pushed straight to \`main\` and tagged - this triggers [release.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml) to build the GitHub Release and Docker image."
+            echo "![release](${BADGE})"
+            echo
+            echo "| Step | Status |"
+            echo "|---|---|"
+            echo "| 📌 Version bumped (\`pyproject.toml\`, \`uv.lock\`) | ✅ \`${VERSION}\` |"
+            echo "| 📝 Changelog converted (\`CHANGELOG.md\`) | ✅ \`[Unreleased]\` → \`[${VERSION}]\` |"
+            echo "| 💾 Committed & pushed to \`main\` | ✅ |"
+            echo "| 🏷️ Tag pushed | ✅ \`${TAG}\` |"
+            echo
+            echo "### 🚀 What happens next"
+            echo
+            echo "Pushing \`${TAG}\` triggers [release.yml](${REPO_URL}/actions/workflows/release.yml) to build the wheel/sdist, cut the GitHub Release, and push the multi-arch Docker image. Give it a minute, then check:"
+            echo
+            echo "| Link | |"
+            echo "|---|---|"
+            echo "| 📦 GitHub Release | **[${TAG}](${REPO_URL}/releases/tag/${TAG})** |"
+            echo "| ⚙️ Release workflow run | [Actions tab](${REPO_URL}/actions/workflows/release.yml) |"
+            echo "| 🐳 Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
             echo
             echo "<details>"
-            echo "<summary>📖 Release notes</summary>"
+            echo "<summary>📖 Release notes for ${TAG}</summary>"
             echo
             echo "${{ steps.changelog.outputs.release-notes }}"
             echo
