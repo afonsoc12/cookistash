@@ -1,7 +1,5 @@
 name: 🚀 Release
 
-concurrency: Release
-
 on:
   push:
     branches:

@@ -1,6 +1,8 @@
 name: 🔍 CI
 
-concurrency: CI
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
