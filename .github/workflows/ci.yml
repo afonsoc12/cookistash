@@ -60,7 +60,7 @@ jobs:
 
       - name: ☁️ Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: build/coverage.xml
           use_oidc: true
@@ -68,7 +68,7 @@ jobs:
 
       - name: ☁️ Upload test results to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: build/junit.xml
           report_type: test_results
