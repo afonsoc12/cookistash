@@ -47,6 +47,9 @@ jobs:
 
           VERSION=$(uv version --short)
           SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "VERSION=$VERSION"
+          echo "SHORT_SHA=$SHORT_SHA"
+          echo "github.ref=${{ github.ref }}"
 
           # A tag only counts as a real release if it's actually reachable
           # from main - a tag pushed from any other branch/commit falls
@@ -60,6 +63,7 @@ jobs:
               echo "::warning::${{ github.ref_name }} is not on main - treating as a pre-release, not a full release."
             fi
           fi
+          echo "IS_RELEASE=$IS_RELEASE"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
@@ -77,6 +81,12 @@ jobs:
             echo "gh_tag=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
+
+          echo "::group::Computed outputs"
+          echo "prerelease=$(grep '^prerelease=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "gh_tag=$(grep '^gh_tag=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "docker_tags=$(grep '^docker_tags=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "::endgroup::"
 
   github-release:
     name: 📦 GitHub Release
