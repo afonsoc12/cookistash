@@ -77,13 +77,15 @@ jobs:
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
             # {version}-dev+{sha}: valid SemVer (pre-release identifier
-            # "dev", build metadata the commit SHA). Docker/OCI tags don't
-            # allow "+" at all (only [a-zA-Z0-9_][a-zA-Z0-9._-]*), so the
-            # Docker tag swaps it for "-" instead. build_version is the
-            # same string fed to `uv version` in the github-release job -
-            # uv normalizes it to PEP 440 (e.g. 0.0.0.dev0+{sha}) for the
-            # actual wheel/sdist, since Python packaging isn't SemVer.
-            echo "gh_tag=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
+            # "dev", build metadata the commit SHA). git tags/GitHub
+            # Release names get the "v" prefix (same convention as full
+            # releases); Docker tags never do (OCI convention is bare
+            # versions), and don't allow "+" at all (only
+            # [a-zA-Z0-9_][a-zA-Z0-9._-]*) so use "-" there instead.
+            # build_version (no "v", fed to `uv version` in the
+            # github-release job) gets normalized to PEP 440 (e.g.
+            # 0.0.0.dev0+{sha}) since Python packaging isn't SemVer.
+            echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "build_version=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
