@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning].
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-09-24
+
 ### Added
 
 - 🔎 Scrape Cookidoo recipes by ID or link, with parsed ingredients/instructions/nutrition/categories/tags/tools
@@ -24,9 +26,8 @@ and this project adheres to [Semantic Versioning].
 
 <!-- Links -->
 
-[Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
-[Semantic Versioning]: https://semver.org/spec/v2.0.0.html
-
 <!-- Versions -->
 
-[unreleased]: https://github.com/afonsoc12/cookistash/commits/master
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.1...HEAD
+
+[0.0.1]: https://github.com/afonsoc12/cookistash/releases/tag/v0.0.1
