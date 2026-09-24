@@ -1,0 +1,63 @@
+<div class="card skeleton-loading" id="recipe-card-{{ recipe.id }}">
+    <a href="{% url 'cookidoo:recipe_detail' recipe.id %}" class="card-image{% if recipe.image_url %} img-loading{% endif %}">
+        {% if recipe.image_url %}
+            <span class="img-skeleton" aria-hidden="true"></span>
+            <img
+                src="{{ recipe.image_url }}" alt="{{ recipe.name }}" loading="lazy"
+                onload="this.closest('.card-image').classList.remove('img-loading')">
+        {% else %}
+            <div class="card-image-placeholder">🍽️</div>
+        {% endif %}
+        <span class="pill pill-{{ recipe.scrape_status }}">{{ recipe.get_scrape_status_display }}</span>
+    </a>
+
+    <div class="card-body">
+        <h3 class="card-title"><a href="{% url 'cookidoo:recipe_detail' recipe.id %}">{{ recipe.name }}</a></h3>
+        <a href="{{ recipe.url }}" target="_blank" class="card-id">{{ recipe.id }} ↗</a>
+
+        <div class="card-meta">
+            <span>🕓 {{ recipe.last_scraped_at|default:"never scraped" }}</span>
+        </div>
+
+        <div class="card-sync">
+            {% if mealie_recipe %}
+                {% if mealie_recipe_url %}
+                    <a href="{{ mealie_recipe_url }}" target="_blank" class="pill pill-success pill-link">✓ synced to Mealie ↗</a>
+                {% else %}
+                    <span class="pill pill-success">✓ synced to Mealie</span>
+                {% endif %}
+            {% else %}
+                <span class="pill pill-muted">not synced</span>
+            {% endif %}
+        </div>
+
+        {% if recipe.scrape_error %}
+            <p class="card-error" title="{{ recipe.scrape_error }}">⚠ {{ recipe.scrape_error|truncatechars:80 }}</p>
+        {% endif %}
+        {% if action_error %}
+            <p class="card-error">⚠ {{ action_error }}</p>
+        {% endif %}
+    </div>
+
+    <div class="card-actions">
+        <button
+            class="btn btn-outline"
+            hx-post="{% url 'cookidoo:recipe_rescrape' recipe.id %}"
+            hx-target="#recipe-card-{{ recipe.id }}"
+            hx-swap="outerHTML"
+            hx-indicator="closest .skeleton-loading">
+            <span class="btn-spinner htmx-indicator" id="spinner-{{ recipe.id }}"></span>
+            ↻ Re-scrape
+        </button>
+        <button
+            class="btn btn-primary"
+            hx-post="{% url 'cookidoo:recipe_send_to_mealie' recipe.id %}"
+            hx-target="#recipe-card-{{ recipe.id }}"
+            hx-swap="outerHTML"
+            hx-indicator="closest .skeleton-loading"
+            {% if not latest_scrape or not latest_scrape.success %}disabled{% endif %}>
+            <span class="btn-spinner htmx-indicator" id="spinner-mealie-{{ recipe.id }}"></span>
+            → Send to Mealie
+        </button>
+    </div>
+</div>

@@ -1,0 +1,116 @@
+<div
+    id="discover-content"
+    class="skeleton-loading{% if shell %} htmx-request{% endif %}"
+    {% if shell %}
+    hx-get="{% url 'cookidoo:discover' %}?category={{ category }}&country={{ country }}&q={{ query|urlencode }}&page={{ page }}"
+    hx-trigger="load" hx-target="#discover-content" hx-swap="outerHTML"
+    {% endif %}>
+    {% if not shell %}
+        {% if not has_cookidoo_source %}
+            <div class="banner banner-warn">
+                ⚠ No <strong>Cookidoo source</strong> configured — set <code>COOKIDOO_EXPLORE_URL</code> before browsing.
+            </div>
+        {% endif %}
+
+        {% if fetch_error %}
+            <div class="banner banner-error">✕ {{ fetch_error }}</div>
+        {% endif %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="banner {% if message.tags == 'error' %}banner-error{% else %}banner-success{% endif %}">
+                    {% if message.tags == 'error' %}✕{% else %}✓{% endif %} {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endif %}
+
+    <div class="toolbar-card" style="margin: 28px 0 8px;">
+        <p class="toolbar-label">Search Cookidoo</p>
+        <form
+            method="get" style="display: flex; gap: 8px; flex-wrap: wrap;"
+            hx-get="{% url 'cookidoo:discover' %}"
+            hx-target="#discover-content" hx-swap="outerHTML" hx-push-url="true"
+            hx-indicator="closest .skeleton-loading">
+            <input type="search" name="q" value="{{ query }}" placeholder="Search recipes on Cookidoo…">
+            <select name="category" onchange="this.form.requestSubmit()">
+                <option value="">All categories</option>
+                {% for cat_id, cat_name in categories.items %}
+                    <option value="{{ cat_id }}" {% if cat_id == category %}selected{% endif %}>{{ cat_name }}</option>
+                {% endfor %}
+            </select>
+            <select name="country" onchange="this.form.requestSubmit()">
+                <option value="">All countries</option>
+                {% for country_id, country_name in countries.items %}
+                    <option value="{{ country_id }}" {% if country_id == country %}selected{% endif %}>{{ country_name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
+
+    {% include "cookidoo/_skeleton_grid.html" %}
+
+    {% if not shell %}
+        {% if results %}
+            <div class="grid real-content">
+                {% for r in results %}
+                    <div class="card">
+                        <a class="card-image{% if r.image %} img-loading{% endif %}" href="{{ r.cookidoo_url }}" target="_blank" rel="noopener">
+                            {% if r.image %}
+                                <span class="img-skeleton" aria-hidden="true"></span>
+                                <img
+                                    src="{{ r.image }}" alt="{{ r.title }}" loading="lazy"
+                                    onload="this.closest('.card-image').classList.remove('img-loading')">
+                            {% endif %}
+                        </a>
+                        <div class="card-body">
+                            <h3 class="card-title">{{ r.title }}</h3>
+                            <a class="card-id" href="{{ r.cookidoo_url }}" target="_blank" rel="noopener">{{ r.id }} on Cookidoo ↗</a>
+                            <div class="card-meta">
+                                {% if r.rating %}★ {{ r.rating }} ({{ r.numberOfRatings }}){% endif %}
+                                {% if r.total_time_display %} · {{ r.total_time_display }}{% endif %}
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            {% if r.already_scraped %}
+                                <a href="{% url 'cookidoo:recipe_detail' r.id %}" class="pill pill-success">✓ Already scraped</a>
+                            {% else %}
+                                <form
+                                    method="post" action="{% url 'cookidoo:discover_import' r.id %}" style="flex:1;"
+                                    hx-post="{% url 'cookidoo:discover_import' r.id %}"
+                                    hx-target="#discover-content" hx-swap="outerHTML"
+                                    hx-indicator="closest .skeleton-loading">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="category" value="{{ category }}">
+                                    <input type="hidden" name="country" value="{{ country }}">
+                                    <input type="hidden" name="q" value="{{ query }}">
+                                    <input type="hidden" name="page" value="{{ page }}">
+                                    <button type="submit" class="btn btn-primary" style="width:100%;">↓ Scrape</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% elif has_cookidoo_source and not fetch_error %}
+            <div class="empty-state real-content">🔍 No recipes found{% if query %} for "{{ query }}"{% endif %}.</div>
+        {% endif %}
+
+        {% if results %}
+            <div class="pagination real-content">
+                {% if page > 0 %}
+                    <a href="?category={{ category }}&country={{ country }}&q={{ query|urlencode }}&page={{ page|add:"-1" }}"
+                       hx-get="?category={{ category }}&country={{ country }}&q={{ query|urlencode }}&page={{ page|add:"-1" }}"
+                       hx-target="#discover-content" hx-swap="outerHTML" hx-push-url="true"
+                       hx-indicator="closest .skeleton-loading">← Prev</a>
+                {% endif %}
+                <span>Page {{ page|add:"1" }}</span>
+                <a href="?category={{ category }}&country={{ country }}&q={{ query|urlencode }}&page={{ page|add:"1" }}"
+                   hx-get="?category={{ category }}&country={{ country }}&q={{ query|urlencode }}&page={{ page|add:"1" }}"
+                   hx-target="#discover-content" hx-swap="outerHTML" hx-push-url="true"
+                   hx-indicator="closest .skeleton-loading">Next →</a>
+            </div>
+        {% endif %}
+    {% endif %}
+</div>

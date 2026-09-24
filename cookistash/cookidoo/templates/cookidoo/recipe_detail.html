@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "cookidoo/_head.html" with title=recipe.name|add:" · Cookistash" extra_fonts="&family=JetBrains+Mono:wght@400;500" %}
+    <style>
+        /* Hero */
+        .hero {
+            display: grid; grid-template-columns: 220px 1fr; gap: 24px;
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 20px; margin-top: 24px;
+        }
+        @media (max-width: 700px) { .hero { grid-template-columns: 1fr; padding: 16px; } }
+        .hero-image-wrap { width: 100%; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden; background: var(--bg); }
+        .hero-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hero-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px; }
+        .hero-link { font-size: 0.85rem; color: var(--muted); text-decoration: none; }
+        .hero-link:hover { color: var(--primary); }
+        .hero-pills { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+        .hero-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; font-size: 0.85rem; color: var(--muted); }
+        .hero-meta strong { color: var(--text); font-weight: 700; }
+        .hero-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        @media (max-width: 480px) { .hero-actions .btn { flex: 1; min-width: 130px; } }
+
+        /* Sections */
+        .section {
+            background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
+            box-shadow: var(--shadow); padding: 20px; margin-top: 20px;
+        }
+        @media (max-width: 480px) { .section { padding: 16px; } }
+        .section-title { font-size: 0.95rem; font-weight: 800; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+        .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tag-chip { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: 0.8rem; }
+
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+        .ingredient-list { list-style: none; margin: 0; padding: 0; }
+        .ingredient-list li {
+            display: flex; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border);
+            font-size: 0.88rem;
+        }
+        .ingredient-list li:last-child { border-bottom: none; }
+        .ing-qty { color: var(--primary); font-weight: 700; min-width: 70px; }
+        .ing-group-header { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 14px 0 4px; }
+        .ing-group-header:first-child { margin-top: 0; }
+
+        .instruction-list { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+        .instruction-item { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .instruction-item:last-child { border-bottom: none; }
+        .instruction-num {
+            counter-increment: step; flex-shrink: 0;
+            width: 28px; height: 28px; border-radius: 50%; background: var(--primary-dark);
+            color: white; font-weight: 700; font-size: 0.85rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .instruction-num::before { content: counter(step); }
+        .instruction-text { font-size: 0.9rem; line-height: 1.5; }
+        .instruction-group-header { font-weight: 700; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); margin: 16px 0 4px; }
+        .instruction-group-header:first-child { margin-top: 0; }
+
+        .nutrition-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; }
+        .nutrition-stat { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+        .nutrition-stat .value { font-size: 1.1rem; font-weight: 800; }
+        .nutrition-stat .label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; }
+
+        .note-item { background: var(--bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 8px; font-size: 0.85rem; }
+        .note-item:last-child { margin-bottom: 0; }
+        .note-title { font-weight: 700; font-size: 0.78rem; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+
+        .empty-note { color: var(--muted); font-size: 0.85rem; font-style: italic; }
+
+        /* Raw JSON */
+        details.json-viewer summary {
+            cursor: pointer; font-weight: 700; font-size: 0.95rem; padding: 4px 0;
+            display: flex; align-items: center; gap: 8px; list-style: none;
+        }
+        details.json-viewer summary::-webkit-details-marker { display: none; }
+        details.json-viewer summary::before { content: '▶'; font-size: 0.7rem; transition: transform 0.15s ease; }
+        details.json-viewer[open] summary::before { transform: rotate(90deg); }
+        .json-box {
+            background: #1e1b18; color: #e8e2da; border-radius: 10px; padding: 16px;
+            margin-top: 12px; max-height: 600px; overflow: auto;
+            font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.8rem; line-height: 1.5;
+            white-space: pre-wrap; word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    {% include "cookidoo/_topbar.html" with active="recipes" show_back=True %}
+
+    <div class="wrap">
+        {% include "cookidoo/_recipe_hero.html" %}
+
+        {% if mealie_recipe %}
+            <div class="two-col">
+                <div class="section">
+                    <p class="section-title">🥕 Ingredients ({{ ingredients|length }})</p>
+                    {% if ingredients %}
+                        <ul class="ingredient-list">
+                            {% regroup ingredients by title as ingredient_groups %}
+                            {% for group in ingredient_groups %}
+                                {% if group.grouper %}<li class="ing-group-header">{{ group.grouper }}</li>{% endif %}
+                                {% for ing in group.list %}
+                                    <li>
+                                        <span class="ing-qty">{{ ing.quantity|default:"" }} {% if ing.unit %}{{ ing.unit.abbreviation|default:ing.unit.name }}{% endif %}</span>
+                                        <span>{{ ing.food.name|default:"" }}{% if ing.note %} <em>({{ ing.note }})</em>{% endif %}</span>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="empty-note">No ingredients parsed.</p>
+                    {% endif %}
+                </div>
+
+                <div class="section">
+                    <p class="section-title">📋 Instructions ({{ instructions|length }})</p>
+                    {% if instructions %}
+                        <ol class="instruction-list">
+                            {% regroup instructions by title as instruction_groups %}
+                            {% for group in instruction_groups %}
+                                {% if group.grouper %}<li class="instruction-group-header">{{ group.grouper }}</li>{% endif %}
+                                {% for step in group.list %}
+                                    <li class="instruction-item">
+                                        <span class="instruction-num"></span>
+                                        <span class="instruction-text">{{ step.formatted_text|safe }}</span>
+                                    </li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ol>
+                    {% else %}
+                        <p class="empty-note">No instructions parsed.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="two-col">
+                <div class="section">
+                    <p class="section-title">🏷 Categories, tags & tools</p>
+                    <p class="ing-group-header" style="margin-top:0;">Categories</p>
+                    <div class="tag-row">
+                        {% for c in mealie_recipe.recipe_category %}<span class="tag-chip">{{ c.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                    <p class="ing-group-header">Tags</p>
+                    <div class="tag-row">
+                        {% for t in mealie_recipe.tags %}<span class="tag-chip">{{ t.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                    <p class="ing-group-header">Tools</p>
+                    <div class="tag-row">
+                        {% for t in mealie_recipe.tools %}<span class="tag-chip">{{ t.name }}</span>{% empty %}<span class="empty-note">none</span>{% endfor %}
+                    </div>
+                </div>
+
+                <div class="section">
+                    <p class="section-title">📝 Notes</p>
+                    {% for note in mealie_recipe.notes %}
+                        <div class="note-item">
+                            {% if note.title %}<div class="note-title">{{ note.title }}</div>{% endif %}
+                            {{ note.text }}
+                        </div>
+                    {% empty %}
+                        <p class="empty-note">No notes.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% if nutrition_items %}
+                <div class="section">
+                    <p class="section-title">🔥 Nutrition (per serving)</p>
+                    <div class="nutrition-grid">
+                        {% for item in nutrition_items %}
+                            <div class="nutrition-stat">
+                                <div class="value">{{ item.value }}{% if item.unit %} <small>{{ item.unit }}</small>{% endif %}</div>
+                                <div class="label">{{ item.label }}</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="section">
+                <p class="empty-note">Not synced to Mealie yet — parsed ingredients/instructions/nutrition will show here once it is.</p>
+            </div>
+        {% endif %}
+
+        <div class="section">
+            <details class="json-viewer">
+                <summary>🔍 Raw scraped JSON{% if not raw_json %} (no successful scrape yet){% endif %}</summary>
+                {% if raw_json %}<div class="json-box">{{ raw_json }}</div>{% endif %}
+            </details>
+        </div>
+
+        {% include "cookidoo/_footer.html" %}
+    </div>
+</body>
+</html>

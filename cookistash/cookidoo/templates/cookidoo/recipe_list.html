@@ -1,0 +1,15 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "cookidoo/_head.html" with title="Cookistash" %}
+</head>
+<body>
+    {% include "cookidoo/_topbar.html" with active="recipes" %}
+
+    <div class="wrap">
+        {% include "cookidoo/_recipe_list_content.html" %}
+        {% include "cookidoo/_footer.html" %}
+    </div>
+</body>
+</html>

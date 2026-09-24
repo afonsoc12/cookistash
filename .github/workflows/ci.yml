@@ -1,0 +1,114 @@
+name: 🔍 CI
+
+concurrency: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v6
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          activate-environment: true
+
+      - name: 📦 Install dependencies
+        run: uv sync --locked --all-groups
+
+      - name: 🔎 ruff format
+        run: uv run ruff format --check
+
+      - name: 🔎 ruff check
+        run: uv run ruff check
+
+      - name: 🔬 mypy
+        run: uv run mypy cookistash/
+
+      - name: ✅ Run unit tests (with coverage)
+        run: uv run pytest -m "not e2e"
+
+      - name: 📊 Upload coverage report (artifact)
+        if: always()
+        id: upload-coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            build/htmlcov/
+            build/coverage.xml
+          retention-days: 14
+
+      - name: ☁️ Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: build/coverage.xml
+          use_oidc: true
+          fail_ci_if_error: false
+
+      - name: 📝 Coverage summary
+        if: always()
+        run: |
+          set -euo pipefail
+
+          PCT="$(uv run coverage report --format=total 2>/dev/null)"
+          THRESHOLD=90
+          ARTIFACT_URL="${{ steps.upload-coverage.outputs.artifact-url }}"
+          CODECOV_URL="https://codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }}"
+
+          if [ "$PCT" -ge "$THRESHOLD" ]; then
+            BADGE="https://img.shields.io/badge/coverage-${PCT}%25-brightgreen?style=for-the-badge&logo=codecov&logoColor=white"
+            VERDICT="✅ **Met** the ${THRESHOLD}% minimum"
+          else
+            BADGE="https://img.shields.io/badge/coverage-${PCT}%25-red?style=for-the-badge&logo=codecov&logoColor=white"
+            VERDICT="❌ **Below** the ${THRESHOLD}% minimum"
+          fi
+
+          {
+            echo "## 🧪 Code Coverage"
+            echo
+            echo "![coverage](${BADGE})"
+            echo
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Total coverage | **${PCT}%** |"
+            echo "| Required minimum | ${THRESHOLD}% (\`fail_under\` in \`pyproject.toml\`) |"
+            echo "| Verdict | ${VERDICT} |"
+            echo
+            echo "<details>"
+            echo "<summary>📁 Per-file breakdown</summary>"
+            echo
+            uv run coverage report --format=markdown 2>/dev/null
+            echo
+            echo "</details>"
+            echo
+            echo "### 📦 Artifacts"
+            echo
+            echo "| Report | Link |"
+            echo "|---|---|"
+            echo "| 🌐 Interactive HTML coverage report | [\`build/htmlcov/\`](${ARTIFACT_URL}) |"
+            echo "| 📄 XML coverage report (for external tooling) | [\`build/coverage.xml\`](${ARTIFACT_URL}) |"
+            echo "| ☁️ Codecov (trends, sunburst, PR diff coverage) | [codecov.io](${CODECOV_URL}) |"
+            echo
+            echo "> Artifact retention: 14 days"
+          } >> "$GITHUB_STEP_SUMMARY"
