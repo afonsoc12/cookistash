@@ -67,7 +67,16 @@ All lint/type-check/test artifacts (`.pytest_cache/`, `.ruff_cache/`, `.mypy_cac
 
 ## CI (`.github/workflows/ci.yml`)
 
-Runs on every push (including `main`) and PR, draft or not: ruff format/check, mypy, unit tests with coverage, then posts a coverage summary (badge, per-file breakdown, links to the `htmlcov`/`coverage.xml` artifact and to Codecov) to the job summary. Coverage is also uploaded to [Codecov](https://codecov.io/gh/afonsoc12/cookistash) for the richer hosted UI (trends, sunburst, PR diff coverage) — authenticated via OIDC (`use_oidc: true` + the job's `id-token: write` permission), not a static token; Codecov's plain public-repo tokenless bypass is being retired in favor of this. No Postgres service needed — `settings.py` auto-detects `CI=true`. Doesn't build the Docker image — that only happens in `release.yml` (on `main`/version tags), which builds and pushes the real multi-arch image to GHCR.
+Runs on every push to `main` and every PR (draft or not): ruff format/check, mypy, unit tests with coverage, then posts a coverage summary (badge, per-file breakdown, links to the `htmlcov`/`coverage.xml`/`junit.xml` artifact and to Codecov) to the job summary. Coverage and test results are also uploaded to [Codecov](https://codecov.io/gh/afonsoc12/cookistash) for the richer hosted UI (trends, sunburst, PR diff coverage, flaky/slow test tracking) — authenticated via OIDC (`use_oidc: true` + the job's `id-token: write` permission), not a static token; Codecov's plain public-repo tokenless bypass is being retired in favor of this. No Postgres service needed — `settings.py` auto-detects `CI=true`. Doesn't build the Docker image itself — that happens in `release.yml`.
+
+## Releases (`.github/workflows/prepare-release.yml` + `release.yml`)
+
+Two-phase, no PR in between:
+
+1. **Prepare**: manually trigger `prepare-release.yml` (`workflow_dispatch`, pick `patch`/`minor`/`major`). It bumps `CHANGELOG.md`'s `[Unreleased]` section to a new version heading (`release-flow/keep-a-changelog-action`'s `bump` command - same tool the release job already uses for `query`), syncs `pyproject.toml`/`uv.lock` to that exact version via `uv version`, commits straight to `main`, then creates and pushes the `vX.Y.Z` tag - all in one atomic run, no separate merge/tag step.
+2. **Publish**: that tag push triggers `release.yml`, which verifies the tag is actually reachable from `main` (`git merge-base --is-ancestor`) before treating it as a real release - a tag pushed from anywhere else falls back to a `dev-{version}+{sha}` pre-release instead. Every push to `main` (tagged or not) also triggers this: untagged pushes always produce a pre-release (GitHub prerelease + `:dev` Docker tag), tagged-and-verified pushes produce a full release (GitHub release + `:latest`/`:{version}` Docker tags), each pushed to GHCR as multi-arch (`linux/amd64,linux/arm64`).
+
+A tag can't just be created on a PR branch and merged in - this repo only allows squash/rebase merges (`mergeCommitAllowed: false`), which rewrite commits to a new SHA, orphaning any tag pointed at the old one. Hence pushing directly to `main` instead of going through a PR.
 
 ## Configuration
 

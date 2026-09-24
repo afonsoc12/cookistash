@@ -1,0 +1,84 @@
+name: 🏷️ Prepare Release
+
+concurrency: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  prepare-release:
+    name: 🏷️ Bump version, changelog & tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
+        with:
+          activate-environment: true
+
+      - name: 📝 Bump changelog
+        id: changelog
+        uses: release-flow/keep-a-changelog-action@v3
+        with:
+          command: bump
+          version: ${{ inputs.bump }}
+          keep-unreleased-section: true
+          fail-on-empty-release-notes: true
+
+      - name: 🏷️ Bump project version
+        run: uv version "${{ steps.changelog.outputs.version }}"
+
+      - name: 🔧 Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 💾 Commit, tag & push
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ steps.changelog.outputs.version }}"
+          TAG="v${VERSION}"
+
+          git add CHANGELOG.md pyproject.toml uv.lock
+          git commit -m "Release ${TAG}"
+          git tag -a "$TAG" -m "Release ${TAG}"
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+      - name: 📝 Job summary
+        run: |
+          {
+            echo "## 🏷️ Release v${{ steps.changelog.outputs.version }} prepared"
+            echo
+            echo "Pushed straight to \`main\` and tagged - this triggers [release.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml) to build the GitHub Release and Docker image."
+            echo
+            echo "<details>"
+            echo "<summary>📖 Release notes</summary>"
+            echo
+            echo "${{ steps.changelog.outputs.release-notes }}"
+            echo
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
