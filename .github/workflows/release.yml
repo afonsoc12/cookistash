@@ -70,11 +70,12 @@ jobs:
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
-            # SemVer build metadata (+sha) is valid in the git tag/GitHub
-            # Release name, but Docker/OCI tags don't allow "+" at all
-            # (only [a-zA-Z0-9_][a-zA-Z0-9._-]*) - use "-" there instead.
-            echo "gh_tag=dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:dev-${VERSION}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+            # {version}-dev+{sha}: valid SemVer (pre-release identifier
+            # "dev", build metadata the commit SHA). Docker/OCI tags don't
+            # allow "+" at all (only [a-zA-Z0-9_][a-zA-Z0-9._-]*), so the
+            # Docker tag swaps it for "-" instead.
+            echo "gh_tag=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
 
   github-release:
