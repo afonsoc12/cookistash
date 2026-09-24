@@ -1,6 +1,8 @@
 name: 🏷️ Prepare Release
 
-concurrency: Release
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 on:
   workflow_dispatch:
