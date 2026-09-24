@@ -1,13 +1,5 @@
 name: 🏷️ Prepare Release
 
-# Shares its group with release.yml's concurrency block (kept in sync
-# manually - GitHub Actions has no way to reference another workflow's
-# group, only to match its literal name) so a publish can't run at the
-# same time as a version bump.
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
-
 on:
   workflow_dispatch:
     inputs:
