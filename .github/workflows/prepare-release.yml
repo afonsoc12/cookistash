@@ -40,8 +40,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          OLD_VERSION=$(uv version --short)
           echo "inputs.version=${{ inputs.version }}"
           echo "inputs.bump=${{ inputs.bump }}"
+          echo "OLD_VERSION=$OLD_VERSION"
 
           if [ -n "${{ inputs.version }}" ]; then
             if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -49,22 +51,55 @@ jobs:
               exit 1
             fi
             uv version "${{ inputs.version }}"
+
+            # keep-a-changelog-action's bump command only accepts a bump
+            # keyword (major/minor/patch/...), not an explicit version, so
+            # an override needs the equivalent keyword derived by diffing
+            # old vs new - whichever component changed at the highest
+            # priority (major > minor > patch).
+            IFS=. read -r OLD_MAJOR OLD_MINOR OLD_PATCH <<< "$OLD_VERSION"
+            IFS=. read -r NEW_MAJOR NEW_MINOR NEW_PATCH <<< "${{ inputs.version }}"
+            if [ "$NEW_MAJOR" != "$OLD_MAJOR" ]; then
+              BUMP_TYPE=major
+            elif [ "$NEW_MINOR" != "$OLD_MINOR" ]; then
+              BUMP_TYPE=minor
+            elif [ "$NEW_PATCH" != "$OLD_PATCH" ]; then
+              BUMP_TYPE=patch
+            else
+              echo "::error::version override '${{ inputs.version }}' is not greater than current '$OLD_VERSION'"
+              exit 1
+            fi
           else
             uv version --bump ${{ inputs.bump }}
+            BUMP_TYPE="${{ inputs.bump }}"
           fi
 
           VERSION=$(uv version --short)
           echo "VERSION=$VERSION"
+          echo "BUMP_TYPE=$BUMP_TYPE"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "bump_type=$BUMP_TYPE" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Bump changelog
         id: changelog
         uses: release-flow/keep-a-changelog-action@v3
         with:
           command: bump
-          version: ${{ steps.version.outputs.version }}
+          version: ${{ steps.version.outputs.bump_type }}
           keep-unreleased-section: true
           fail-on-empty-release-notes: true
+
+      - name: ✅ Verify changelog version matches pyproject.toml
+        run: |
+          set -euo pipefail
+
+          echo "changelog version=${{ steps.changelog.outputs.version }}"
+          echo "pyproject version=${{ steps.version.outputs.version }}"
+
+          if [ "${{ steps.changelog.outputs.version }}" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::CHANGELOG.md was bumped to '${{ steps.changelog.outputs.version }}' but pyproject.toml is '${{ steps.version.outputs.version }}' - they've drifted apart, most likely CHANGELOG.md's release history doesn't match pyproject.toml's actual version. Fix manually before re-running."
+            exit 1
+          fi
 
       - name: 🔧 Configure git
         run: |
