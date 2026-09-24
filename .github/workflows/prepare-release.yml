@@ -40,6 +40,9 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "inputs.version=${{ inputs.version }}"
+          echo "inputs.bump=${{ inputs.bump }}"
+
           if [ -n "${{ inputs.version }}" ]; then
             if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
               echo "::error::version override must look like X.Y.Z, got '${{ inputs.version }}'"
@@ -50,7 +53,9 @@ jobs:
             uv version --bump ${{ inputs.bump }}
           fi
 
-          echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+          VERSION=$(uv version --short)
+          echo "VERSION=$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Bump changelog
         id: changelog
@@ -71,6 +76,7 @@ jobs:
           set -euo pipefail
 
           TAG="v${{ steps.version.outputs.version }}"
+          echo "TAG=$TAG"
 
           git add CHANGELOG.md pyproject.toml uv.lock
           git commit -m "Release ${TAG}"
@@ -84,6 +90,9 @@ jobs:
           TAG="v${VERSION}"
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
           BADGE="https://img.shields.io/badge/prepared-${TAG}-blue?style=for-the-badge&logo=git&logoColor=white"
+          echo "VERSION=$VERSION"
+          echo "TAG=$TAG"
+          echo "REPO_URL=$REPO_URL"
 
           {
             echo "## 🏷️ Release ${TAG} Prepared"

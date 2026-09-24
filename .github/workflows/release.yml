@@ -26,6 +26,7 @@ jobs:
       gh_tag: ${{ steps.meta.outputs.gh_tag }}
       docker_tags: ${{ steps.meta.outputs.docker_tags }}
       version: ${{ steps.meta.outputs.version }}
+      build_version: ${{ steps.meta.outputs.build_version }}
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v6
@@ -47,6 +48,9 @@ jobs:
 
           VERSION=$(uv version --short)
           SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "VERSION=$VERSION"
+          echo "SHORT_SHA=$SHORT_SHA"
+          echo "github.ref=${{ github.ref }}"
 
           # A tag only counts as a real release if it's actually reachable
           # from main - a tag pushed from any other branch/commit falls
@@ -60,6 +64,7 @@ jobs:
               echo "::warning::${{ github.ref_name }} is not on main - treating as a pre-release, not a full release."
             fi
           fi
+          echo "IS_RELEASE=$IS_RELEASE"
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
@@ -67,16 +72,28 @@ jobs:
           if [ "$IS_RELEASE" = "true" ]; then
             echo "prerelease=false" >> $GITHUB_OUTPUT
             echo "gh_tag=v${VERSION}" >> $GITHUB_OUTPUT
+            echo "build_version=${VERSION}" >> $GITHUB_OUTPUT
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
             # {version}-dev+{sha}: valid SemVer (pre-release identifier
             # "dev", build metadata the commit SHA). Docker/OCI tags don't
             # allow "+" at all (only [a-zA-Z0-9_][a-zA-Z0-9._-]*), so the
-            # Docker tag swaps it for "-" instead.
+            # Docker tag swaps it for "-" instead. build_version is the
+            # same string fed to `uv version` in the github-release job -
+            # uv normalizes it to PEP 440 (e.g. 0.0.0.dev0+{sha}) for the
+            # actual wheel/sdist, since Python packaging isn't SemVer.
             echo "gh_tag=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "build_version=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
           fi
+
+          echo "::group::Computed outputs"
+          echo "prerelease=$(grep '^prerelease=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "gh_tag=$(grep '^gh_tag=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "build_version=$(grep '^build_version=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "docker_tags=$(grep '^docker_tags=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
+          echo "::endgroup::"
 
   github-release:
     name: 📦 GitHub Release
@@ -95,6 +112,12 @@ jobs:
 
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v8.1.0
+
+      - name: 🏷️ Set package version for this build
+        run: |
+          echo "build_version (input)=${{ needs.meta.outputs.build_version }}"
+          uv version "${{ needs.meta.outputs.build_version }}"
+          echo "uv version --short (applied)=$(uv version --short)"
 
       - name: 🏗️ Build wheel + sdist
         run: uv build
