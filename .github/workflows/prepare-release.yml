@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: Version bump
+        description: Version bump (ignored if "version" is set)
         required: true
         type: choice
         default: patch
@@ -14,6 +14,10 @@ on:
           - patch
           - minor
           - major
+      version:
+        description: "Exact version override, e.g. 1.2.3 (optional - takes precedence over bump)"
+        required: false
+        type: string
 
 jobs:
   prepare-release:
@@ -28,27 +32,36 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: .python-version
-
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v8.1.0
         with:
           activate-environment: true
+
+      - name: 🏷️ Bump project version
+        id: version
+        run: |
+          set -euo pipefail
+
+          if [ -n "${{ inputs.version }}" ]; then
+            if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::version override must look like X.Y.Z, got '${{ inputs.version }}'"
+              exit 1
+            fi
+            uv version "${{ inputs.version }}"
+          else
+            uv version --bump ${{ inputs.bump }}
+          fi
+
+          echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Bump changelog
         id: changelog
         uses: release-flow/keep-a-changelog-action@v3
         with:
           command: bump
-          version: ${{ inputs.bump }}
+          version: ${{ steps.version.outputs.version }}
           keep-unreleased-section: true
           fail-on-empty-release-notes: true
-
-      - name: 🏷️ Bump project version
-        run: uv version "${{ steps.changelog.outputs.version }}"
 
       - name: 🔧 Configure git
         run: |
@@ -59,8 +72,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${{ steps.changelog.outputs.version }}"
-          TAG="v${VERSION}"
+          TAG="v${{ steps.version.outputs.version }}"
 
           git add CHANGELOG.md pyproject.toml uv.lock
           git commit -m "Release ${TAG}"
@@ -71,7 +83,7 @@ jobs:
       - name: 📝 Job summary
         run: |
           {
-            echo "## 🏷️ Release v${{ steps.changelog.outputs.version }} prepared"
+            echo "## 🏷️ Release v${{ steps.version.outputs.version }} prepared"
             echo
             echo "Pushed straight to \`main\` and tagged - this triggers [release.yml](${{ github.server_url }}/${{ github.repository }}/actions/workflows/release.yml) to build the GitHub Release and Docker image."
             echo
