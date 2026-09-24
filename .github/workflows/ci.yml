@@ -47,15 +47,16 @@ jobs:
       - name: ✅ Run unit tests (with coverage)
         run: uv run pytest -m "not e2e"
 
-      - name: 📊 Upload coverage report (artifact)
+      - name: 📊 Upload coverage + test results (artifact)
         if: always()
         id: upload-coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: test-reports
           path: |
             build/htmlcov/
             build/coverage.xml
+            build/junit.xml
           retention-days: 14
 
       - name: ☁️ Upload coverage to Codecov
@@ -63,6 +64,15 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           files: build/coverage.xml
+          use_oidc: true
+          fail_ci_if_error: false
+
+      - name: ☁️ Upload test results to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          files: build/junit.xml
+          report_type: test_results
           use_oidc: true
           fail_ci_if_error: false
 
@@ -108,7 +118,10 @@ jobs:
             echo "|---|---|"
             echo "| 🌐 Interactive HTML coverage report | [\`build/htmlcov/\`](${ARTIFACT_URL}) |"
             echo "| 📄 XML coverage report (for external tooling) | [\`build/coverage.xml\`](${ARTIFACT_URL}) |"
-            echo "| ☁️ Codecov (trends, sunburst, PR diff coverage) | [codecov.io](${CODECOV_URL}) |"
+            echo "| 🧪 JUnit test results (for external tooling) | [\`build/junit.xml\`](${ARTIFACT_URL}) |"
+            echo "| ☁️ Codecov coverage (trends, sunburst, PR diff coverage) | [codecov.io](${CODECOV_URL}) |"
+            echo "| ☁️ Codecov test analytics (flaky/slow test tracking) | [codecov.io](${CODECOV_URL}/tests) |"
             echo
-            echo "> Artifact retention: 14 days"
+            echo "> Artifact retention: 14 days. GitHub only lets artifacts be downloaded as a zip -"
+            echo "> the Codecov links above render in-browser instead, no download needed."
           } >> "$GITHUB_STEP_SUMMARY"

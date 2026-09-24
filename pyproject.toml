@@ -37,7 +37,7 @@ dev = [
 DJANGO_SETTINGS_MODULE = "cookistash.settings"
 testpaths = ["tests"]
 cache_dir = "build/.pytest_cache"
-addopts = "-v --tb=short --strict-markers --cov=cookistash --cov-report=term-missing --cov-report=html --cov-report=xml"
+addopts = "-v --tb=short --strict-markers --cov=cookistash --cov-report=term-missing --cov-report=html --cov-report=xml --junitxml=build/junit.xml"
 markers = [
     "e2e: end-to-end tests against live docker-compose services (Postgres, Mealie) - excluded by default, run explicitly with -m e2e",
 ]

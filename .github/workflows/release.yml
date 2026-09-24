@@ -5,7 +5,7 @@ concurrency: Release
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
@@ -15,10 +15,67 @@ jobs:
     name: 🔍 CI
     uses: ./.github/workflows/ci.yml
 
+  meta:
+    name: 🏷️ Determine release metadata
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.meta.outputs.is_release }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      gh_tag: ${{ steps.meta.outputs.gh_tag }}
+      docker_tags: ${{ steps.meta.outputs.docker_tags }}
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
+
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v8.1.0
+
+      - name: 🏷️ Determine metadata
+        id: meta
+        run: |
+          set -euo pipefail
+
+          VERSION=$(uv version --short)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+
+          # A tag only counts as a real release if it's actually reachable
+          # from main - a tag pushed from any other branch/commit falls
+          # back to a dev pre-release instead of cutting a full release.
+          IS_RELEASE=false
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            git fetch origin main --quiet
+            if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
+              IS_RELEASE=true
+            else
+              echo "::warning::${{ github.ref_name }} is not on main - treating as a pre-release, not a full release."
+            fi
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
+
+          if [ "$IS_RELEASE" = "true" ]; then
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "gh_tag=v${VERSION}" >> $GITHUB_OUTPUT
+            echo "docker_tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            echo "gh_tag=dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
+            echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
+
   github-release:
     name: 📦 GitHub Release
-    needs: ci
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: meta
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -37,39 +94,25 @@ jobs:
       - name: 🏗️ Build wheel + sdist
         run: uv build
 
-      - name: 🏷️ Determine release metadata
-        id: meta
-        run: |
-          VERSION=$(uv version --short)
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
-          if [ "$IS_RELEASE" = "true" ]; then
-            echo "tag=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-          else
-            echo "tag=dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: 📖 Extract changelog notes
         id: changelog
         uses: release-flow/keep-a-changelog-action@v3
         with:
           command: query
-          version: ${{ startsWith(github.ref, 'refs/tags/v') && 'latest' || 'unreleased' }}
+          version: ${{ needs.meta.outputs.is_release == 'true' && 'latest' || 'unreleased' }}
 
       - name: 🚀 Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.tag }}
+          tag_name: ${{ needs.meta.outputs.gh_tag }}
+          name: ${{ needs.meta.outputs.gh_tag }}
           body: ${{ steps.changelog.outputs.release-notes }}
-          prerelease: ${{ steps.meta.outputs.prerelease }}
+          prerelease: ${{ needs.meta.outputs.prerelease }}
           files: dist/*
 
   build:
     name: 🐳 Build & Push Docker Image
-    needs: ci
+    needs: meta
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -78,31 +121,6 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v6
-
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v6
-        with:
-          python-version-file: .python-version
-
-      - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v8.1.0
-        with:
-          activate-environment: true
-
-      - name: 🏷️ Determine tags
-        id: tags
-        run: |
-          VERSION=$(uv version --short)
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          IS_RELEASE=${{ startsWith(github.ref, 'refs/tags/v') }}
-
-          if [ "$IS_RELEASE" = "true" ]; then
-            echo "tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "version=dev-${VERSION}+${SHORT_SHA}" >> $GITHUB_OUTPUT
-          fi
 
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -124,7 +142,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{ needs.meta.outputs.docker_tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -139,5 +157,5 @@ jobs:
           - **Commit SHA**: ${{ github.sha }}
 
           ## Tags
-          ${{ steps.tags.outputs.tags }}
+          ${{ needs.meta.outputs.docker_tags }}
           EOF
