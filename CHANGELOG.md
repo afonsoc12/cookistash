@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning].
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔧 CI and release lifecycle cleanup — correct Docker image version on pre-releases, no more stray `.gitignore` release asset, releases now fail loudly instead of publishing with an empty changelog, and releases reliably trigger end-to-end
+
 ## [0.0.1] - 2026-09-24
 
 ### Added
