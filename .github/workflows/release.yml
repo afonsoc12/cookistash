@@ -152,6 +152,12 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v7
 
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: 🏷️ Set package version for this build
+        run: uv version "${{ needs.meta.outputs.build_version }}"
+
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
 
