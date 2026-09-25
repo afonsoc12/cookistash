@@ -2,10 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog],
-and this project adheres to [Semantic Versioning].
+The format is based on \[Keep a Changelog],
+and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
+
+## [0.0.2] - 2026-09-25
 
 ### Fixed
 
@@ -32,6 +34,8 @@ and this project adheres to [Semantic Versioning].
 
 <!-- Versions -->
 
-[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.2...HEAD
+
+[0.0.2]: https://github.com/afonsoc12/cookistash/compare/v0.0.1...v0.0.2
 
 [0.0.1]: https://github.com/afonsoc12/cookistash/releases/tag/v0.0.1
