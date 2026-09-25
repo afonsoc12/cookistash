@@ -52,9 +52,7 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA"
           echo "github.ref=${{ github.ref }}"
 
-          # A tag only counts as a real release if it's actually reachable
-          # from main - a tag pushed from any other branch/commit falls
-          # back to a dev pre-release instead of cutting a full release.
+          # Only tags reachable from main count as real releases; others fall back to a pre-release.
           IS_RELEASE=false
           if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
             git fetch origin main --quiet
@@ -76,15 +74,7 @@ jobs:
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
           else
             echo "prerelease=true" >> $GITHUB_OUTPUT
-            # {version}-dev+{sha}: valid SemVer (pre-release identifier
-            # "dev", build metadata the commit SHA). git tags/GitHub
-            # Release names get the "v" prefix (same convention as full
-            # releases); Docker tags never do (OCI convention is bare
-            # versions), and don't allow "+" at all (only
-            # [a-zA-Z0-9_][a-zA-Z0-9._-]*) so use "-" there instead.
-            # build_version (no "v", fed to `uv version` in the
-            # github-release job) gets normalized to PEP 440 (e.g.
-            # 0.0.0.dev0+{sha}) since Python packaging isn't SemVer.
+            # Docker tags can't contain "+", so use "-" there instead of the SemVer build-metadata separator.
             echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "build_version=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
             echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
@@ -131,6 +121,13 @@ jobs:
           command: query
           version: ${{ needs.meta.outputs.is_release == 'true' && 'latest' || 'unreleased' }}
 
+      - name: 🔎 Verify changelog notes aren't empty
+        run: |
+          if [ -z "${{ steps.changelog.outputs.release-notes }}" ]; then
+            echo "::error::CHANGELOG.md's [Unreleased] section is empty - add an entry before releasing."
+            exit 1
+          fi
+
       - name: 🚀 Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
@@ -138,7 +135,9 @@ jobs:
           name: ${{ needs.meta.outputs.gh_tag }}
           body: ${{ steps.changelog.outputs.release-notes }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
 
   build:
     name: 🐳 Build & Push Docker Image
@@ -151,6 +150,12 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
+
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: 🏷️ Set package version for this build
+        run: uv version "${{ needs.meta.outputs.build_version }}"
 
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
