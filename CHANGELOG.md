@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Changed
+
+- 🪶 Trimmed the container's compute footprint — dropped nginx (gunicorn + WhiteNoise now serve `/static/` directly), merged Celery beat into the worker process, gunicorn down to 1 worker, Celery switched to a single-process `solo` pool (was one forked child per host CPU core), and Flower is no longer always-on (still available on-demand, see README). Idle memory down from ~677Mi to ~200Mi in local testing.
+
 ## [0.0.2] - 2026-09-25
 
 ### Fixed

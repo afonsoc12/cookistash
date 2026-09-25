@@ -4,7 +4,7 @@ This file provides guidance to AI agents working with code in this repository. K
 
 ## Project Overview
 
-**Cookistash** scrapes recipes from Cookidoo (Bimby/Thermomix) and optionally syncs them to a self-hosted Mealie instance. It's a single Django app (+ Celery worker/beat + Flower), packaged into one Docker image. Mealie sync is entirely optional — it only activates once a Mealie source is configured; scraping/browsing works standalone.
+**Cookistash** scrapes recipes from Cookidoo (Bimby/Thermomix) and optionally syncs them to a self-hosted Mealie instance. It's a single Django app (gunicorn + WhiteNoise) plus one Celery worker with beat baked in and a `solo` pool (`celery worker -B --pool=solo` - single process, no per-CPU-core forking, since task volume here doesn't need it), packaged into one Docker image, deliberately kept minimal (no nginx, no always-on Flower) so it fits small compute limits. Mealie sync is entirely optional — it only activates once a Mealie source is configured; scraping/browsing works standalone.
 
 Two Django apps:
 - `cookistash/cookidoo/` — scrapes Cookidoo, stores raw + parsed recipe data (`Source`, recipe models), the Explorer UI (`views.py`, `templates/`), Celery tasks for scraping (`tasks.py`).

@@ -20,14 +20,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/app/.venv/bin:$PATH"
 
 # libpq: psycopg2's runtime shared lib (not the -dev/build headers from the
-# builder stage). tzdata: the app runs in Europe/London. nginx: fronts
-# Django + Flower on a single port (8000).
-RUN apk add --no-cache libpq tzdata nginx
+# builder stage). tzdata: the app runs in Europe/London. Static files are
+# served by gunicorn + WhiteNoise directly - no nginx needed.
+RUN apk add --no-cache libpq tzdata
 
 WORKDIR /app
 COPY --from=builder /app /app
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh \
     && mkdir -p /var/log/supervisor
