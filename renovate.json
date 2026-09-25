@@ -3,5 +3,23 @@
   "labels": ["renovate"],
   "extends": [
     "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "groupName": "uv / Python dependencies"
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "groupName": "docker-compose"
+    },
+    {
+      "matchManagers": ["dockerfile"],
+      "groupName": "Dockerfile"
+    }
   ]
 }
