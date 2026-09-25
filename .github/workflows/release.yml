@@ -29,17 +29,17 @@ jobs:
       build_version: ${{ steps.meta.outputs.build_version }}
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: 🐍 Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
 
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: 🏷️ Determine metadata
         id: meta
@@ -105,15 +105,15 @@ jobs:
       contents: write
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🐍 Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version-file: .python-version
 
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v8.1.0
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: 🏷️ Set package version for this build
         run: |
@@ -150,7 +150,7 @@ jobs:
       packages: write
     steps:
       - name: 📥 Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
