@@ -2,6 +2,17 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "labels": ["renovate"],
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "group:allNonMajor"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions"
+    },
+    {
+      "matchManagers": ["pep621"],
+      "groupName": "uv dependencies"
+    }
   ]
 }
