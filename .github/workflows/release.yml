@@ -138,7 +138,9 @@ jobs:
           name: ${{ needs.meta.outputs.gh_tag }}
           body: ${{ steps.changelog.outputs.release-notes }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
-          files: dist/*
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
 
   build:
     name: 🐳 Build & Push Docker Image
