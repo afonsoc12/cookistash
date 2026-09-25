@@ -131,6 +131,13 @@ jobs:
           command: query
           version: ${{ needs.meta.outputs.is_release == 'true' && 'latest' || 'unreleased' }}
 
+      - name: 🔎 Verify changelog notes aren't empty
+        run: |
+          if [ -z "${{ steps.changelog.outputs.release-notes }}" ]; then
+            echo "::error::CHANGELOG.md's [Unreleased] section is empty - add an entry before releasing."
+            exit 1
+          fi
+
       - name: 🚀 Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
