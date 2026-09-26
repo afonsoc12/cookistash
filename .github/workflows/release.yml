@@ -17,8 +17,16 @@ on:
           - major
 
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      id-token: write
+
   prepare-release:
     name: Prepare Release
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,6 +34,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       sha: ${{ steps.commit.outputs.sha }}
+      short_sha: ${{ steps.commit.outputs.short_sha }}
       release_notes: ${{ steps.changelog.outputs.release-notes }}
 
     steps:
@@ -90,8 +99,11 @@ jobs:
           git push origin HEAD:main
 
           SHA=$(git rev-parse HEAD)
+          SHORT_SHA=$(git rev-parse --short HEAD)
           echo "SHA=$SHA"
+          echo "SHORT_SHA=$SHORT_SHA"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Job summary
         run: |
@@ -110,22 +122,12 @@ jobs:
             echo "| Changelog | \`[Unreleased]\` → \`[${VERSION}]\` |"
             echo "| Committed to \`main\` | ✅ |"
             echo
-            echo "Running CI, then building the wheel/sdist and Docker image, then publishing the release, then promoting the Docker image to :latest/:${VERSION} once everything above succeeds."
+            echo "CI already passed. Building the wheel/sdist and Docker image next, then publishing the release, then promoting the Docker image to :latest/:${VERSION} once everything above succeeds."
           } >> "$GITHUB_STEP_SUMMARY"
-
-  ci:
-    name: CI
-    needs: prepare-release
-    uses: ./.github/workflows/ci.yml
-    permissions:
-      contents: read
-      id-token: write
-    with:
-      ref: ${{ needs.prepare-release.outputs.sha }}
 
   build:
     name: Build
-    needs: [prepare-release, ci]
+    needs: prepare-release
     uses: ./.github/workflows/build.yml
     permissions:
       contents: read
@@ -133,7 +135,7 @@ jobs:
     with:
       ref: ${{ needs.prepare-release.outputs.sha }}
       # Staging tag only - promote-image below moves this to :latest/:{version}.
-      docker_tags: ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}
+      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-build-${{ needs.prepare-release.outputs.short_sha }}
 
   create-release:
     name: Create GitHub Release
@@ -211,7 +213,7 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          STAGING="ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}"
+          STAGING="ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-build-${{ needs.prepare-release.outputs.short_sha }}"
 
           # Copies the existing manifest to new tags - no rebuild.
           docker buildx imagetools create \
