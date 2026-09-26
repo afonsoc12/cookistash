@@ -1,196 +1,187 @@
-name: 🚀 Release
+name: Release
+
+concurrency:
+  group: prepare-release
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        required: true
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   ci:
-    name: 🔍 CI
+    name: CI
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
       id-token: write
 
-  meta:
-    name: 🏷️ Determine release metadata
+  prepare-release:
+    name: Prepare Release
     needs: ci
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
-      is_release: ${{ steps.meta.outputs.is_release }}
-      prerelease: ${{ steps.meta.outputs.prerelease }}
-      gh_tag: ${{ steps.meta.outputs.gh_tag }}
-      docker_tags: ${{ steps.meta.outputs.docker_tags }}
-      version: ${{ steps.meta.outputs.version }}
-      build_version: ${{ steps.meta.outputs.build_version }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      sha: ${{ steps.commit.outputs.sha }}
+      release_notes: ${{ steps.changelog.outputs.release-notes }}
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v7
-        with:
-          python-version-file: .python-version
-
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v10.2.0
+        with:
+          activate-environment: true
 
-      - name: 🏷️ Determine metadata
-        id: meta
+      - name: 🏷️ Bump project version
+        id: version
         run: |
           set -euo pipefail
 
+          echo "inputs.bump=${{ inputs.bump }}"
+
+          uv version --bump ${{ inputs.bump }}
+
           VERSION=$(uv version --short)
-          SHORT_SHA=$(git rev-parse --short HEAD)
+          TAG="v${VERSION}"
           echo "VERSION=$VERSION"
-          echo "SHORT_SHA=$SHORT_SHA"
-          echo "github.ref=${{ github.ref }}"
+          echo "TAG=$TAG"
 
-          # Only tags reachable from main count as real releases; others fall back to a pre-release.
-          IS_RELEASE=false
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            git fetch origin main --quiet
-            if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
-              IS_RELEASE=true
-            else
-              echo "::warning::${{ github.ref_name }} is not on main - treating as a pre-release, not a full release."
-            fi
-          fi
-          echo "IS_RELEASE=$IS_RELEASE"
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
-
-          if [ "$IS_RELEASE" = "true" ]; then
-            echo "prerelease=false" >> $GITHUB_OUTPUT
-            echo "gh_tag=v${VERSION}" >> $GITHUB_OUTPUT
-            echo "build_version=${VERSION}" >> $GITHUB_OUTPUT
-            echo "docker_tags=ghcr.io/afonsoc12/cookistash:${VERSION},ghcr.io/afonsoc12/cookistash:latest" >> $GITHUB_OUTPUT
-          else
-            echo "prerelease=true" >> $GITHUB_OUTPUT
-            # Docker tags can't contain "+", so use "-" there instead of the SemVer build-metadata separator.
-            echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "build_version=${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
-            echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          # A previous run may have already pushed this tag and failed later.
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" > /dev/null; then
+            echo "::error::${TAG} already exists on origin - a previous prepare-release run for this version may have failed partway through. Investigate/delete that tag before re-running, or this will silently skip a version."
+            exit 1
           fi
 
-          echo "::group::Computed outputs"
-          echo "prerelease=$(grep '^prerelease=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
-          echo "gh_tag=$(grep '^gh_tag=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
-          echo "build_version=$(grep '^build_version=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
-          echo "docker_tags=$(grep '^docker_tags=' $GITHUB_OUTPUT | tail -1 | cut -d= -f2-)"
-          echo "::endgroup::"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-  github-release:
-    name: 📦 GitHub Release
-    needs: meta
+      - name: 📝 Bump changelog
+        id: changelog
+        uses: release-flow/keep-a-changelog-action@v3
+        with:
+          command: bump
+          version: ${{ inputs.bump }}
+          keep-unreleased-section: true
+          fail-on-empty-release-notes: true
+
+      - name: 🔧 Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 💾 Commit & push to main
+        id: commit
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "TAG=$TAG"
+
+          git add CHANGELOG.md pyproject.toml uv.lock
+          # [skip ci]: this commit gets a real release below, not a dev build.
+          git commit -m "Release ${TAG} [skip ci]"
+          git push origin HEAD:main
+
+          SHA=$(git rev-parse HEAD)
+          echo "SHA=$SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: 📝 Job summary
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "VERSION=$VERSION"
+          echo "TAG=$TAG"
+
+          {
+            echo "## 🏷️ Release ${TAG} Prepared"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Status | ✅ Success |"
+            echo "| Version | \`${VERSION}\` |"
+            echo "| Changelog | \`[Unreleased]\` → \`[${VERSION}]\` |"
+            echo "| Committed to \`main\` | ✅ |"
+            echo
+            echo "CI already passed. Building the wheel/sdist and Docker image next, then publishing the release once everything above succeeds."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build
+    needs: prepare-release
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      ref: ${{ needs.prepare-release.outputs.sha }}
+      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }},ghcr.io/afonsoc12/cookistash:latest
+
+  create-release:
+    name: Create GitHub Release
+    needs: [prepare-release, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v7
-
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v7
+      - name: 📥 Download dist artifact
+        uses: actions/download-artifact@v6
         with:
-          python-version-file: .python-version
-
-      - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v10.2.0
-
-      - name: 🏷️ Set package version for this build
-        run: |
-          echo "build_version (input)=${{ needs.meta.outputs.build_version }}"
-          uv version "${{ needs.meta.outputs.build_version }}"
-          echo "uv version --short (applied)=$(uv version --short)"
-
-      - name: 🏗️ Build wheel + sdist
-        run: uv build
-
-      - name: 📖 Extract changelog notes
-        id: changelog
-        uses: release-flow/keep-a-changelog-action@v3
-        with:
-          command: query
-          version: ${{ needs.meta.outputs.is_release == 'true' && 'latest' || 'unreleased' }}
-
-      - name: 🔎 Verify changelog notes aren't empty
-        run: |
-          if [ -z "${{ steps.changelog.outputs.release-notes }}" ]; then
-            echo "::error::CHANGELOG.md's [Unreleased] section is empty - add an entry before releasing."
-            exit 1
-          fi
+          name: dist
+          path: dist
 
       - name: 🚀 Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ needs.meta.outputs.gh_tag }}
-          name: ${{ needs.meta.outputs.gh_tag }}
-          body: ${{ steps.changelog.outputs.release-notes }}
-          prerelease: ${{ needs.meta.outputs.prerelease }}
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          name: ${{ needs.prepare-release.outputs.tag }}
+          target_commitish: ${{ needs.prepare-release.outputs.sha }}
+          body: ${{ needs.prepare-release.outputs.release_notes }}
+          files: dist/*
 
-  build:
-    name: 🐳 Build & Push Docker Image
-    needs: meta
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v7
+      - name: 🔎 Verify release exists with expected assets
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
 
-      - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v10.2.0
+          TAG="${{ needs.prepare-release.outputs.tag }}"
+          ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+          echo "Assets attached to $TAG:"
+          echo "$ASSETS"
 
-      - name: 🏷️ Set package version for this build
-        run: uv version "${{ needs.meta.outputs.build_version }}"
-
-      - name: 🔧 Set up QEMU
-        uses: docker/setup-qemu-action@v4
-
-      - name: 🔨 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: 🔐 Login to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🐳 Build and push
-        uses: docker/build-push-action@v7
-        id: build
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ needs.meta.outputs.docker_tags }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          echo "$ASSETS" | grep -q '\.whl$' || { echo "::error::No .whl attached to $TAG"; exit 1; }
+          echo "$ASSETS" | grep -q '\.tar\.gz$' || { echo "::error::No sdist (.tar.gz) attached to $TAG"; exit 1; }
 
       - name: 📝 Job summary
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          # 🐳 Docker Build Summary
+          TAG="${{ needs.prepare-release.outputs.tag }}"
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
 
-          ## Build Information
-          - **Status**: ✅ Success
-          - **Branch/Tag**: ${{ github.ref_name }}
-          - **Commit SHA**: ${{ github.sha }}
-
-          ## Tags
-          ${{ needs.meta.outputs.docker_tags }}
-          EOF
+          {
+            echo "## 🚀 Release ${TAG} Published"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Status | ✅ Success |"
+            echo "| GitHub Release | [${TAG}](${REPO_URL}/releases/tag/${TAG}) |"
+            echo "| Wheel/sdist | ✅ Verified attached |"
+            echo "| Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
+          } >> "$GITHUB_STEP_SUMMARY"

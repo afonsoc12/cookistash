@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Changed
+
+- 🔧 Reworked the release pipeline to fix duplicate runs and half-built releases going live
+
 ## [0.0.3] - 2026-09-26
 
 ### Added
