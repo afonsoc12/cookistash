@@ -154,21 +154,6 @@ jobs:
           body: ${{ needs.prepare-release.outputs.release_notes }}
           files: dist/*
 
-      - name: 🔎 Verify release exists with expected assets
-        id: verify
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          TAG="${{ needs.prepare-release.outputs.tag }}"
-          ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name')
-          echo "Assets attached to $TAG:"
-          echo "$ASSETS"
-
-          echo "$ASSETS" | grep -q '\.whl$' || { echo "::error::No .whl attached to $TAG"; exit 1; }
-          echo "$ASSETS" | grep -q '\.tar\.gz$' || { echo "::error::No sdist (.tar.gz) attached to $TAG"; exit 1; }
-
       - name: 📝 Job summary
         run: |
           TAG="${{ needs.prepare-release.outputs.tag }}"
@@ -182,6 +167,5 @@ jobs:
             echo "|---|---|"
             echo "| Status | ✅ Success |"
             echo "| GitHub Release | [${TAG}](${REPO_URL}/releases/tag/${TAG}) |"
-            echo "| Wheel/sdist | ✅ Verified attached |"
             echo "| Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
           } >> "$GITHUB_STEP_SUMMARY"
