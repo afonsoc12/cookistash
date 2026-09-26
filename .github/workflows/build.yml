@@ -68,6 +68,16 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
 
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: 🏷️ Resolve OCI label values
+        id: labels
+        run: |
+          VERSION="$(uv version --short)${{ inputs.version_suffix }}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
 
@@ -88,6 +98,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ inputs.docker_tags }}
+          build-args: |
+            VERSION=${{ steps.labels.outputs.version }}
+            REVISION=${{ inputs.ref }}
+            BUILD_DATE=${{ steps.labels.outputs.build_date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
