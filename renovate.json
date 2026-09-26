@@ -20,6 +20,13 @@
     {
       "matchManagers": ["dockerfile"],
       "groupName": "Dockerfile"
+    },
+    {
+      "matchManagers": ["docker-compose"],
+      "matchPackageNames": ["ghcr.io/mealie-recipes/mealie"],
+      "groupName": "Mealie",
+      "schedule": ["* 8 * * 1"],
+      "timezone": "Etc/UTC"
     }
   ]
 }
