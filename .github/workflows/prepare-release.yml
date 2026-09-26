@@ -62,7 +62,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: 💾 Commit, tag & push
+      - name: 💾 Commit & push to main
         run: |
           set -euo pipefail
 
@@ -71,9 +71,35 @@ jobs:
 
           git add CHANGELOG.md pyproject.toml uv.lock
           git commit -m "Release ${TAG}"
-          git tag -a "$TAG" -m "Release ${TAG}"
           git push origin HEAD:main
-          git push origin "$TAG"
+
+      - name: 🏷️ Create GitHub release
+        env:
+          # The default GITHUB_TOKEN can't trigger other workflow runs (same
+          # reason the checkout above uses RELEASE_PAT) - release.yml listens
+          # for this release being published, so it needs RELEASE_PAT here too.
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
+        run: |
+          set -euo pipefail
+
+          TAG="v${{ steps.version.outputs.version }}"
+          echo "TAG=$TAG"
+
+          # --target main creates the tag on the commit just pushed, as part
+          # of publishing the release - no separate `git tag` step. One API
+          # call, one release: published event, instead of a second push
+          # event racing the one from the commit above.
+          # Notes go through a file (--notes-file) rather than inline
+          # --notes, so quotes/backticks in the changelog text can't break
+          # the shell command.
+          cat > /tmp/release-notes.md << 'RELEASE_NOTES_EOF'
+          ${{ steps.changelog.outputs.release-notes }}
+          RELEASE_NOTES_EOF
+
+          gh release create "$TAG" \
+            --target main \
+            --title "$TAG" \
+            --notes-file /tmp/release-notes.md
 
       - name: 📝 Job summary
         run: |
@@ -95,11 +121,11 @@ jobs:
             echo "| 📌 Version bumped (\`pyproject.toml\`, \`uv.lock\`) | ✅ \`${VERSION}\` |"
             echo "| 📝 Changelog converted (\`CHANGELOG.md\`) | ✅ \`[Unreleased]\` → \`[${VERSION}]\` |"
             echo "| 💾 Committed & pushed to \`main\` | ✅ |"
-            echo "| 🏷️ Tag pushed | ✅ \`${TAG}\` |"
+            echo "| 🏷️ GitHub Release published (tag \`${TAG}\` created as part of it) | ✅ |"
             echo
             echo "### 🚀 What happens next"
             echo
-            echo "Pushing \`${TAG}\` triggers [release.yml](${REPO_URL}/actions/workflows/release.yml) to build the wheel/sdist, cut the GitHub Release, and push the multi-arch Docker image. Give it a minute, then check:"
+            echo "Publishing \`${TAG}\` triggers [release.yml](${REPO_URL}/actions/workflows/release.yml) to build the wheel/sdist and push the multi-arch Docker image, attaching them to the release above. Give it a minute, then check:"
             echo
             echo "| Link | |"
             echo "|---|---|"

@@ -4,8 +4,8 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -50,11 +50,15 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           echo "VERSION=$VERSION"
           echo "SHORT_SHA=$SHORT_SHA"
+          echo "github.event_name=${{ github.event_name }}"
           echo "github.ref=${{ github.ref }}"
 
-          # Only tags reachable from main count as real releases; others fall back to a pre-release.
+          # A published release (created by prepare-release.yml, tag included as
+          # part of publishing it) is a real release. Anything else - a plain
+          # push to main, or someone manually publishing a release off a commit
+          # that never made it to main - falls back to a pre-release.
           IS_RELEASE=false
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "${{ github.event_name }}" == release ]]; then
             git fetch origin main --quiet
             if git merge-base --is-ancestor "${{ github.sha }}" origin/main; then
               IS_RELEASE=true
@@ -114,27 +118,41 @@ jobs:
       - name: 🏗️ Build wheel + sdist
         run: uv build
 
+      # A real release's GitHub Release already exists by this point -
+      # prepare-release.yml's `gh release create` is what triggered this run
+      # in the first place. Just attach the build artifacts to it.
+      - name: 📤 Upload artifacts to the release
+        if: needs.meta.outputs.is_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${{ needs.meta.outputs.gh_tag }}" dist/*.whl dist/*.tar.gz --clobber
+
+      # The dev/pre-release path has no release object yet - a plain push to
+      # main doesn't go through prepare-release.yml, so this job creates one.
       - name: 📖 Extract changelog notes
         id: changelog
+        if: needs.meta.outputs.is_release != 'true'
         uses: release-flow/keep-a-changelog-action@v3
         with:
           command: query
-          version: ${{ needs.meta.outputs.is_release == 'true' && 'latest' || 'unreleased' }}
+          version: unreleased
 
       - name: 🔎 Verify changelog notes aren't empty
+        if: needs.meta.outputs.is_release != 'true'
         run: |
           if [ -z "${{ steps.changelog.outputs.release-notes }}" ]; then
             echo "::error::CHANGELOG.md's [Unreleased] section is empty - add an entry before releasing."
             exit 1
           fi
 
-      - name: 🚀 Create GitHub release
+      - name: 🚀 Create pre-release
+        if: needs.meta.outputs.is_release != 'true'
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.meta.outputs.gh_tag }}
           name: ${{ needs.meta.outputs.gh_tag }}
           body: ${{ steps.changelog.outputs.release-notes }}
-          prerelease: ${{ needs.meta.outputs.prerelease }}
+          prerelease: true
           files: |
             dist/*.whl
             dist/*.tar.gz
