@@ -177,6 +177,7 @@ jobs:
       - name: 📝 Job summary
         run: |
           TAG="${{ needs.prepare-release.outputs.tag }}"
+          VERSION="${{ needs.prepare-release.outputs.version }}"
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
 
           {
@@ -188,7 +189,7 @@ jobs:
             echo "| GitHub Release | [${TAG}](${REPO_URL}/releases/tag/${TAG}) |"
             echo "| Wheel/sdist | ✅ Verified attached |"
             echo
-            echo "Promoting the Docker image to :latest/:\`{version}\` next."
+            echo "Promoting the Docker image to \`:latest\`/\`:${VERSION}\` next."
           } >> "$GITHUB_STEP_SUMMARY"
 
   promote-image:
@@ -208,7 +209,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🐳 Promote staging image to :latest/:{version}
+      - name: 🐳 Promote staging image to :latest/:${{ needs.prepare-release.outputs.version }}
         run: |
           set -euo pipefail
 
