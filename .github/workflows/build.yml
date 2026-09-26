@@ -76,7 +76,8 @@ jobs:
         run: |
           VERSION="$(uv version --short)${{ inputs.version_suffix }}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          # The commit's own timestamp, not "now" - reproducible regardless of when CI happens to run.
+          echo "build_date=$(git log -1 --format=%cI)" >> "$GITHUB_OUTPUT"
 
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4

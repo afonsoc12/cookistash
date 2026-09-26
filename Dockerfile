@@ -16,24 +16,23 @@ RUN uv sync --locked --no-dev
 FROM python:3.14-alpine
 
 # Passed via --build-arg from build.yml so each pushed image carries its
-# real version/commit/date - default to "unknown" so a plain `docker build .`
+# real version/commit/date - default to "n/a" so a plain `docker build .`
 # (no build-args) still produces a valid, non-empty label rather than an
 # empty string.
-ARG VERSION=unknown
-ARG REVISION=unknown
-ARG BUILD_DATE=unknown
+ARG VERSION=n/a
+ARG REVISION=n/a
+ARG BUILD_DATE=n/a
 
 # OCI standard labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md) -
 # org.opencontainers.image.source in particular is what tools like Renovate
 # and GHCR's own UI read to link an image back to this repo.
 LABEL org.opencontainers.image.title="Cookistash" \
-    org.opencontainers.image.description="Scrapes recipes from Cookidoo (Bimby/Thermomix), with optional sync to Mealie" \
+    org.opencontainers.image.description="🥘 Stash your Cookidoo recipes and sync them to Mealie." \
     org.opencontainers.image.source="https://github.com/afonsoc12/cookistash" \
-    org.opencontainers.image.url="https://github.com/afonsoc12/cookistash" \
+    org.opencontainers.image.url="https://github.com/afonsoc12/cookistash/pkgs/container/cookistash?tag=${VERSION}" \
     org.opencontainers.image.documentation="https://github.com/afonsoc12/cookistash/blob/main/README.md" \
     org.opencontainers.image.licenses="MIT" \
-    org.opencontainers.image.authors="Afonso Costa" \
-    org.opencontainers.image.vendor="Afonso Costa" \
+    org.opencontainers.image.authors="afonsoc12" \
     org.opencontainers.image.version="${VERSION}" \
     org.opencontainers.image.revision="${REVISION}" \
     org.opencontainers.image.created="${BUILD_DATE}"
