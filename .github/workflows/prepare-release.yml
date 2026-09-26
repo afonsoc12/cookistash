@@ -55,10 +55,7 @@ jobs:
           echo "VERSION=$VERSION"
           echo "TAG=$TAG"
 
-          # A prior run for this same version may have already pushed this tag
-          # (build or release-creation failed after the bump landed on main) -
-          # bumping past it here instead of surfacing that would leave the
-          # earlier failure permanently unresolved.
+          # A previous run may have already pushed this tag and failed later.
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" > /dev/null; then
             echo "::error::${TAG} already exists on origin - a previous prepare-release run for this version may have failed partway through. Investigate/delete that tag before re-running, or this will silently skip a version."
             exit 1
@@ -90,8 +87,7 @@ jobs:
           echo "TAG=$TAG"
 
           git add CHANGELOG.md pyproject.toml uv.lock
-          # [skip ci]: this commit gets a real release below - a canary build
-          # for the same commit from canary.yml would be pointless.
+          # [skip ci]: this commit gets a real release below, not a canary build.
           git commit -m "Release ${TAG} [skip ci]"
           git push origin HEAD:main
 
@@ -137,10 +133,7 @@ jobs:
       packages: write
     with:
       ref: ${{ needs.prepare-release.outputs.sha }}
-      # A staging tag only, not :latest/:{version} yet - those only appear
-      # once create-release below has actually confirmed the release exists,
-      # so nothing public-facing goes live before there's a real release
-      # behind it.
+      # Staging tag only - promote-image below moves this to :latest/:{version}.
       docker_tags: ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}
 
   create-release:
@@ -219,9 +212,7 @@ jobs:
           VERSION="${{ needs.prepare-release.outputs.version }}"
           STAGING="ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}"
 
-          # imagetools create copies the existing multi-arch manifest to new
-          # tags - no rebuild, so the promoted image is byte-identical to
-          # what CI/the release above already verified.
+          # Copies the existing manifest to new tags - no rebuild.
           docker buildx imagetools create \
             --tag "ghcr.io/afonsoc12/cookistash:${VERSION}" \
             --tag ghcr.io/afonsoc12/cookistash:latest \

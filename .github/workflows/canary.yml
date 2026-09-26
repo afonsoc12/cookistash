@@ -49,10 +49,7 @@ jobs:
           # Docker tags can't contain "+", so use "-" there instead of the SemVer build-metadata separator.
           echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
-          # Committed pyproject.toml never changes between releases, so every
-          # canary wheel would otherwise share one filename/version despite
-          # different content - this gives each one a unique local identifier
-          # without ever touching the committed version.
+          # Gives each canary wheel a unique filename without touching the committed version.
           echo "version_suffix=+dev.${SHORT_SHA}" >> $GITHUB_OUTPUT
 
   build:

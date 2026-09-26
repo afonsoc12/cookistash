@@ -1,10 +1,7 @@
 name: Build
 
-# Shared by canary.yml and prepare-release.yml. Builds exactly what's checked
-# out at `ref` - no `uv version` mutation for real releases, so the artifacts
-# always match the committed pyproject.toml. version_suffix is the one
-# exception, used only for canary builds (see canary.yml) to give otherwise-
-# identical dev wheels a unique, non-committed local version identifier.
+# Shared by canary.yml and prepare-release.yml. Builds `ref` as-is - no
+# `uv version` mutation, except version_suffix for canary builds.
 
 on:
   workflow_call:
