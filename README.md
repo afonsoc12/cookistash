@@ -4,7 +4,7 @@
 
 # Cookistash
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/dev-release.yml?branch=main&label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/dev-release.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/release.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=coverage&logo=codecov&logoColor=white)](https://codecov.io/gh/afonsoc12/cookistash)
 [![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
 
@@ -78,17 +78,12 @@ Lists scraped recipes with their scrape/sync status. Click a recipe for parsed i
 - **↻ Re-scrape** — re-fetches the recipe from Cookidoo
 - **→ Send to Mealie** — transforms the latest scrape and pushes it to Mealie (only shown when Mealie is configured)
 
-## ⏰ Scheduled Jobs
-
-A nightly job (03:00) re-scrapes any recipe not fetched in the last 7 days, keeping your library fresh automatically. Editable from the admin at `/admin/django_celery_beat/periodictask/` — no restart needed.
-
 ## 🗺️ Roadmap
 
 - [x] Browse/search Cookidoo's catalog and import without needing a recipe ID first — see **Discover**
 - [ ] Bulk import (import more than one recipe at a time)
 - [ ] Retry/backoff on background jobs and outbound requests
-- [ ] Rate limiting on collection scraping
-- [ ] Search by ingredient in the Explorer (currently name only)
+- [ ] Delete a recipe from Mealie directly from Cookistash
 
 ## 📄 License
 

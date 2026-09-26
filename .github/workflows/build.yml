@@ -1,6 +1,6 @@
 name: Build
 
-# Shared by dev-release.yml and prepare-release.yml. Builds `ref` as-is - no
+# Shared by dev-release.yml and release.yml. Builds `ref` as-is - no
 # `uv version` mutation, except version_suffix for dev builds.
 
 on:

@@ -1,7 +1,7 @@
 name: Dev Release
 
 # Continuous build on every push to main - real releases are handled entirely
-# by prepare-release.yml instead (see CLAUDE.md). No GitHub release is
+# by release.yml instead (see CLAUDE.md). No GitHub release is
 # created here; the wheel/sdist is just uploaded as a workflow artifact and
 # the Docker image gets a rolling :dev tag.
 
