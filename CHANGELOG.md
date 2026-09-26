@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Added
+
+- 🏷️ Standard OCI image labels on the Docker image (source, licenses, version, revision, created, etc.) - fixes GHCR/Renovate having no repo link for the published image
+
 ### Changed
 
 - 🔧 Reworked the release pipeline to fix duplicate runs and half-built releases going live
