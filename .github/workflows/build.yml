@@ -46,7 +46,7 @@ jobs:
       - name: 📝 Job summary
         run: |
           {
-            echo "## 🐍 Wheel & Sdist Summary"
+            echo "## 🐍 Python Build Summary"
             echo
             echo "| File | Size |"
             echo "|---|---|"
