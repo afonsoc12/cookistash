@@ -4,7 +4,7 @@
 
 # Cookistash
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/canary.yml?branch=main&label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/canary.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/dev-release.yml?branch=main&label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/dev-release.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=coverage&logo=codecov&logoColor=white)](https://codecov.io/gh/afonsoc12/cookistash)
 [![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
 

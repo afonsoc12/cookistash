@@ -87,7 +87,7 @@ jobs:
           echo "TAG=$TAG"
 
           git add CHANGELOG.md pyproject.toml uv.lock
-          # [skip ci]: this commit gets a real release below, not a canary build.
+          # [skip ci]: this commit gets a real release below, not a dev build.
           git commit -m "Release ${TAG} [skip ci]"
           git push origin HEAD:main
 

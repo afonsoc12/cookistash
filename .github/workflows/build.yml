@@ -1,7 +1,7 @@
 name: Build
 
-# Shared by canary.yml and prepare-release.yml. Builds `ref` as-is - no
-# `uv version` mutation, except version_suffix for canary builds.
+# Shared by dev-release.yml and prepare-release.yml. Builds `ref` as-is - no
+# `uv version` mutation, except version_suffix for dev builds.
 
 on:
   workflow_call:

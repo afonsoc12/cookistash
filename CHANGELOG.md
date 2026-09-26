@@ -9,7 +9,7 @@ and this project adheres to \[Semantic Versioning].
 
 ### Changed
 
-- 🔧 Split the release pipeline: `canary.yml` handles dev prereleases on every push to `main`, `prepare-release.yml` now builds and publishes real releases in one self-contained run, always against the exact commit it just bumped and always gated on CI passing. Fixes a duplicate-run bug, releases only appear once fully built and verified, and `:latest`/`:{version}` Docker tags don't go live until the release behind them is confirmed to exist.
+- 🔧 Split the release pipeline: `dev-release.yml` builds a `:dev` Docker image on every push to `main` (no GitHub prerelease - nothing consumes the wheel/sdist for those), `prepare-release.yml` now builds and publishes real releases in one self-contained run, always against the exact commit it just bumped and always gated on CI passing. Fixes a duplicate-run bug, releases only appear once fully built and verified, and `:latest`/`:{version}` Docker tags don't go live until the release behind them is confirmed to exist.
 
 ## [0.0.3] - 2026-09-26
 
