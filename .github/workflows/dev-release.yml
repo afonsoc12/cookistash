@@ -1,0 +1,95 @@
+name: 🌙 Dev Release
+
+# Continuous dev build on every push to main - real releases are handled
+# entirely by prepare-release.yml instead (see CLAUDE.md).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: 🔍 CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+      id-token: write
+
+  meta:
+    name: 🏷️ Determine dev build metadata
+    needs: ci
+    runs-on: ubuntu-latest
+    outputs:
+      gh_tag: ${{ steps.meta.outputs.gh_tag }}
+      docker_tags: ${{ steps.meta.outputs.docker_tags }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+
+      - name: ⚡ Setup uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: 🏷️ Determine metadata
+        id: meta
+        run: |
+          set -euo pipefail
+
+          VERSION=$(uv version --short)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "VERSION=$VERSION"
+          echo "SHORT_SHA=$SHORT_SHA"
+
+          # Docker tags can't contain "+", so use "-" there instead of the SemVer build-metadata separator.
+          echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+  build:
+    name: 🏗️ Build
+    needs: meta
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      docker_tags: ${{ needs.meta.outputs.docker_tags }}
+
+  github-release:
+    name: 📦 GitHub Prerelease
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+
+      - name: 📥 Download dist artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
+
+      - name: 📖 Extract changelog notes
+        id: changelog
+        uses: release-flow/keep-a-changelog-action@v3
+        with:
+          command: query
+          version: unreleased
+
+      - name: 🔎 Verify changelog notes aren't empty
+        run: |
+          if [ -z "${{ steps.changelog.outputs.release-notes }}" ]; then
+            echo "::error::CHANGELOG.md's [Unreleased] section is empty - add an entry before merging."
+            exit 1
+          fi
+
+      - name: 🚀 Create GitHub prerelease
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.meta.outputs.gh_tag }}
+          name: ${{ needs.meta.outputs.gh_tag }}
+          body: ${{ steps.changelog.outputs.release-notes }}
+          prerelease: true
+          files: dist/*

@@ -19,15 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      release_notes: ${{ steps.changelog.outputs.release-notes }}
 
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          # A push authenticated with the default GITHUB_TOKEN can't trigger other workflow runs,
-          # so release.yml would never fire from this job's push to main. RELEASE_PAT is a
-          # fine-grained PAT (see CONTRIBUTING/CLAUDE.md for required scopes) used instead.
+          # Same RELEASE_PAT used for every other automation push to main - see CLAUDE.md.
           token: ${{ secrets.RELEASE_PAT }}
 
       - name: ⚡ Setup uv
@@ -47,6 +49,7 @@ jobs:
           VERSION=$(uv version --short)
           echo "VERSION=$VERSION"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Bump changelog
         id: changelog
@@ -66,65 +69,79 @@ jobs:
         run: |
           set -euo pipefail
 
-          TAG="v${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
           echo "TAG=$TAG"
 
           git add CHANGELOG.md pyproject.toml uv.lock
-          git commit -m "Release ${TAG}"
+          # [skip ci]: this commit gets a real release below - a dev prerelease
+          # for the same commit from dev-release.yml would be pointless.
+          git commit -m "Release ${TAG} [skip ci]"
           git push origin HEAD:main
-
-      - name: 🏷️ Create GitHub release
-        uses: softprops/action-gh-release@v3
-        with:
-          # The default GITHUB_TOKEN can't trigger other workflow runs (same
-          # reason the checkout above uses RELEASE_PAT) - release.yml listens
-          # for this release being published, so it needs RELEASE_PAT here too.
-          token: ${{ secrets.RELEASE_PAT }}
-          tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
-          # target_commitish creates the tag on the commit just pushed above,
-          # as part of publishing the release - no separate `git tag` step.
-          # One API call, one release: published event, instead of a second
-          # push event racing the one from the commit above.
-          target_commitish: main
-          body: ${{ steps.changelog.outputs.release-notes }}
 
       - name: 📝 Job summary
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          TAG="v${VERSION}"
-          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
-          BADGE="https://img.shields.io/badge/prepared-${TAG}-blue?style=for-the-badge&logo=git&logoColor=white"
+          TAG="${{ steps.version.outputs.tag }}"
           echo "VERSION=$VERSION"
           echo "TAG=$TAG"
-          echo "REPO_URL=$REPO_URL"
 
           {
             echo "## 🏷️ Release ${TAG} Prepared"
-            echo
-            echo "![release](${BADGE})"
             echo
             echo "| Step | Status |"
             echo "|---|---|"
             echo "| 📌 Version bumped (\`pyproject.toml\`, \`uv.lock\`) | ✅ \`${VERSION}\` |"
             echo "| 📝 Changelog converted (\`CHANGELOG.md\`) | ✅ \`[Unreleased]\` → \`[${VERSION}]\` |"
             echo "| 💾 Committed & pushed to \`main\` | ✅ |"
-            echo "| 🏷️ GitHub Release published (tag \`${TAG}\` created as part of it) | ✅ |"
             echo
-            echo "### 🚀 What happens next"
+            echo "Building the wheel/sdist and Docker image next, then publishing the release once both succeed."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: 🏗️ Build
+    needs: prepare-release
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }},ghcr.io/afonsoc12/cookistash:latest
+
+  create-release:
+    name: 📦 Create GitHub Release
+    needs: [prepare-release, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Download dist artifact
+        uses: actions/download-artifact@v6
+        with:
+          name: dist
+          path: dist
+
+      - name: 🚀 Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.prepare-release.outputs.tag }}
+          name: ${{ needs.prepare-release.outputs.tag }}
+          target_commitish: main
+          body: ${{ needs.prepare-release.outputs.release_notes }}
+          files: dist/*
+
+      - name: 📝 Job summary
+        run: |
+          TAG="${{ needs.prepare-release.outputs.tag }}"
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+
+          {
+            echo "## 🚀 Release ${TAG} Published"
             echo
-            echo "Publishing \`${TAG}\` triggers [release.yml](${REPO_URL}/actions/workflows/release.yml) to build the wheel/sdist and push the multi-arch Docker image, attaching them to the release above. Give it a minute, then check:"
+            echo "Built and released - wheel/sdist and the multi-arch Docker image were already attached/pushed before this release went live."
             echo
             echo "| Link | |"
             echo "|---|---|"
             echo "| 📦 GitHub Release | **[${TAG}](${REPO_URL}/releases/tag/${TAG})** |"
-            echo "| ⚙️ Release workflow run | [Actions tab](${REPO_URL}/actions/workflows/release.yml) |"
             echo "| 🐳 Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
-            echo
-            echo "<details>"
-            echo "<summary>📖 Release notes for ${TAG}</summary>"
-            echo
-            echo "${{ steps.changelog.outputs.release-notes }}"
-            echo
-            echo "</details>"
           } >> "$GITHUB_STEP_SUMMARY"

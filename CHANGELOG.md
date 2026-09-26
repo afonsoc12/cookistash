@@ -7,9 +7,9 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
-### Fixed
+### Changed
 
-- 🔧 `release.yml` no longer runs twice per release — it now triggers on the release being published rather than the tag push, so the version-bump commit landing on `main` and the release being cut are no longer two competing `push` events for the same commit
+- 🔧 Split the release pipeline: `dev-release.yml` handles dev prereleases on every push to `main`, `prepare-release.yml` now builds and publishes real releases in one self-contained run. Fixes a duplicate-run bug and releases now only appear once fully built.
 
 ## [0.0.3] - 2026-09-26
 
