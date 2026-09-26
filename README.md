@@ -4,7 +4,7 @@
 
 # Cookistash
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/dev-release.yml?branch=main&label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/dev-release.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/canary.yml?branch=main&label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/canary.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=coverage&logo=codecov&logoColor=white)](https://codecov.io/gh/afonsoc12/cookistash)
 [![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
 
@@ -137,7 +137,7 @@ Requires a reachable Postgres (`DB_HOST=localhost DB_NAME=cookistash` works agai
 
 `.github/workflows/ci.yml` runs ruff (format + lint), mypy, and the unit test suite with coverage (uploaded as a build artifact). e2e tests are skipped (they need live services CI doesn't spin up).
 
-`.github/workflows/dev-release.yml` runs CI, then builds/pushes a Docker image on every push to `main`, tagged `ghcr.io/afonsoc12/cookistash:dev` and `:{version}-dev-{sha}`, plus a GitHub prerelease with notes pulled from `CHANGELOG.md`'s `[Unreleased]` section.
+`.github/workflows/canary.yml` runs CI, then builds/pushes a Docker image on every push to `main`, tagged `ghcr.io/afonsoc12/cookistash:dev` and `:{version}-dev-{sha}`, plus a GitHub prerelease with notes pulled from `CHANGELOG.md`'s `[Unreleased]` section.
 
 To cut a real release, manually trigger `.github/workflows/prepare-release.yml` (Actions tab → pick a `patch`/`minor`/`major` bump) — it bumps the version, moves `CHANGELOG.md`'s `[Unreleased]` section to `[X.Y.Z] - <date>`, commits that to `main`, builds the wheel/sdist and multi-arch Docker image (`ghcr.io/afonsoc12/cookistash:{version}` + `:latest`), and only then publishes the GitHub Release with everything already attached.
 

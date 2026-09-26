@@ -1,15 +1,24 @@
 name: 🏗️ Build
 
-# Shared by dev-release.yml and prepare-release.yml. Builds exactly what's
-# checked out - no `uv version` mutation - so the artifacts always match the
-# committed pyproject.toml, not a build-time-only value.
+# Shared by canary.yml and prepare-release.yml. Builds exactly what's checked
+# out at `ref` - no `uv version` mutation for real releases, so the artifacts
+# always match the committed pyproject.toml. version_suffix is the one
+# exception, used only for canary builds (see canary.yml) to give otherwise-
+# identical dev wheels a unique, non-committed local version identifier.
 
 on:
   workflow_call:
     inputs:
+      ref:
+        required: true
+        type: string
       docker_tags:
         required: true
         type: string
+      version_suffix:
+        required: false
+        type: string
+        default: ""
 
 jobs:
   wheels:
@@ -18,9 +27,15 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v10.2.0
+
+      - name: 🏷️ Apply local version suffix
+        if: inputs.version_suffix != ''
+        run: uv version "$(uv version --short)${{ inputs.version_suffix }}"
 
       - name: 🏗️ Build wheel + sdist
         run: uv build
@@ -41,6 +56,8 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: 🔧 Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -72,7 +89,7 @@ jobs:
 
           ## Build Information
           - **Status**: ✅ Success
-          - **Commit SHA**: ${{ github.sha }}
+          - **Commit SHA**: ${{ inputs.ref }}
 
           ## Tags
           ${{ inputs.docker_tags }}

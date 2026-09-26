@@ -1,7 +1,11 @@
-name: 🌙 Dev Release
+name: 🐦 Canary
 
-# Continuous dev build on every push to main - real releases are handled
+# Continuous unstable build on every push to main - real releases are handled
 # entirely by prepare-release.yml instead (see CLAUDE.md).
+
+concurrency:
+  group: canary-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   push:
@@ -18,12 +22,13 @@ jobs:
       id-token: write
 
   meta:
-    name: 🏷️ Determine dev build metadata
+    name: 🏷️ Determine canary build metadata
     needs: ci
     runs-on: ubuntu-latest
     outputs:
       gh_tag: ${{ steps.meta.outputs.gh_tag }}
       docker_tags: ${{ steps.meta.outputs.docker_tags }}
+      version_suffix: ${{ steps.meta.outputs.version_suffix }}
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v7
@@ -44,6 +49,11 @@ jobs:
           # Docker tags can't contain "+", so use "-" there instead of the SemVer build-metadata separator.
           echo "gh_tag=v${VERSION}-dev+${SHORT_SHA}" >> $GITHUB_OUTPUT
           echo "docker_tags=ghcr.io/afonsoc12/cookistash:dev,ghcr.io/afonsoc12/cookistash:${VERSION}-dev-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          # Committed pyproject.toml never changes between releases, so every
+          # canary wheel would otherwise share one filename/version despite
+          # different content - this gives each one a unique local identifier
+          # without ever touching the committed version.
+          echo "version_suffix=+dev.${SHORT_SHA}" >> $GITHUB_OUTPUT
 
   build:
     name: 🏗️ Build
@@ -53,7 +63,9 @@ jobs:
       contents: read
       packages: write
     with:
+      ref: ${{ github.sha }}
       docker_tags: ${{ needs.meta.outputs.docker_tags }}
+      version_suffix: ${{ needs.meta.outputs.version_suffix }}
 
   github-release:
     name: 📦 GitHub Prerelease
