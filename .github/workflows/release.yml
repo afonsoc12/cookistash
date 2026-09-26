@@ -34,7 +34,6 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       tag: ${{ steps.version.outputs.tag }}
       sha: ${{ steps.commit.outputs.sha }}
-      short_sha: ${{ steps.commit.outputs.short_sha }}
       release_notes: ${{ steps.changelog.outputs.release-notes }}
 
     steps:
@@ -99,11 +98,8 @@ jobs:
           git push origin HEAD:main
 
           SHA=$(git rev-parse HEAD)
-          SHORT_SHA=$(git rev-parse --short HEAD)
           echo "SHA=$SHA"
-          echo "SHORT_SHA=$SHORT_SHA"
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Job summary
         run: |
@@ -122,7 +118,7 @@ jobs:
             echo "| Changelog | \`[Unreleased]\` → \`[${VERSION}]\` |"
             echo "| Committed to \`main\` | ✅ |"
             echo
-            echo "CI already passed. Building the wheel/sdist and Docker image next, then publishing the release, then promoting the Docker image to :latest/:${VERSION} once everything above succeeds."
+            echo "CI already passed. Building the wheel/sdist and Docker image next, then publishing the release once everything above succeeds."
           } >> "$GITHUB_STEP_SUMMARY"
 
   build:
@@ -134,8 +130,7 @@ jobs:
       packages: write
     with:
       ref: ${{ needs.prepare-release.outputs.sha }}
-      # Staging tag only - promote-image below moves this to :latest/:{version}.
-      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-dev-${{ needs.prepare-release.outputs.short_sha }}
+      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }},ghcr.io/afonsoc12/cookistash:latest
 
   create-release:
     name: Create GitHub Release
@@ -188,51 +183,5 @@ jobs:
             echo "| Status | ✅ Success |"
             echo "| GitHub Release | [${TAG}](${REPO_URL}/releases/tag/${TAG}) |"
             echo "| Wheel/sdist | ✅ Verified attached |"
-            echo
-            echo "Promoting the Docker image to \`:latest\`/\`:${VERSION}\` next."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  promote-image:
-    name: Promote Docker Image
-    needs: [prepare-release, build, create-release]
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-    steps:
-      - name: 🔨 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: 🔐 Login to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🐳 Promote staging image to :latest/:${{ needs.prepare-release.outputs.version }}
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ needs.prepare-release.outputs.version }}"
-          STAGING="ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-dev-${{ needs.prepare-release.outputs.short_sha }}"
-
-          # Copies the existing manifest to new tags - no rebuild.
-          docker buildx imagetools create \
-            --tag "ghcr.io/afonsoc12/cookistash:${VERSION}" \
-            --tag ghcr.io/afonsoc12/cookistash:latest \
-            "$STAGING"
-
-      - name: 📝 Job summary
-        run: |
-          VERSION="${{ needs.prepare-release.outputs.version }}"
-          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
-
-          {
-            echo "## 🐳 Docker Image Promoted"
-            echo
-            echo "| Field | Value |"
-            echo "|---|---|"
-            echo "| Status | ✅ Success |"
             echo "| Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
-            echo "| Also tagged | \`:latest\` |"
           } >> "$GITHUB_STEP_SUMMARY"
