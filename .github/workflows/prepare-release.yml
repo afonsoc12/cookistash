@@ -74,32 +74,20 @@ jobs:
           git push origin HEAD:main
 
       - name: 🏷️ Create GitHub release
-        env:
+        uses: softprops/action-gh-release@v3
+        with:
           # The default GITHUB_TOKEN can't trigger other workflow runs (same
           # reason the checkout above uses RELEASE_PAT) - release.yml listens
           # for this release being published, so it needs RELEASE_PAT here too.
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          set -euo pipefail
-
-          TAG="v${{ steps.version.outputs.version }}"
-          echo "TAG=$TAG"
-
-          # --target main creates the tag on the commit just pushed, as part
-          # of publishing the release - no separate `git tag` step. One API
-          # call, one release: published event, instead of a second push
-          # event racing the one from the commit above.
-          # Notes go through a file (--notes-file) rather than inline
-          # --notes, so quotes/backticks in the changelog text can't break
-          # the shell command.
-          cat > /tmp/release-notes.md << 'RELEASE_NOTES_EOF'
-          ${{ steps.changelog.outputs.release-notes }}
-          RELEASE_NOTES_EOF
-
-          gh release create "$TAG" \
-            --target main \
-            --title "$TAG" \
-            --notes-file /tmp/release-notes.md
+          token: ${{ secrets.RELEASE_PAT }}
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          # target_commitish creates the tag on the commit just pushed above,
+          # as part of publishing the release - no separate `git tag` step.
+          # One API call, one release: published event, instead of a second
+          # push event racing the one from the commit above.
+          target_commitish: main
+          body: ${{ steps.changelog.outputs.release-notes }}
 
       - name: 📝 Job summary
         run: |
