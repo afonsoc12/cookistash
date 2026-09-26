@@ -51,9 +51,21 @@ jobs:
           uv version --bump ${{ inputs.bump }}
 
           VERSION=$(uv version --short)
+          TAG="v${VERSION}"
           echo "VERSION=$VERSION"
+          echo "TAG=$TAG"
+
+          # A prior run for this same version may have already pushed this tag
+          # (build or release-creation failed after the bump landed on main) -
+          # bumping past it here instead of surfacing that would leave the
+          # earlier failure permanently unresolved.
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" > /dev/null; then
+            echo "::error::${TAG} already exists on origin - a previous prepare-release run for this version may have failed partway through. Investigate/delete that tag before re-running, or this will silently skip a version."
+            exit 1
+          fi
+
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: 📝 Bump changelog
         id: changelog
@@ -103,7 +115,7 @@ jobs:
             echo "| 📝 Changelog converted (\`CHANGELOG.md\`) | ✅ \`[Unreleased]\` → \`[${VERSION}]\` |"
             echo "| 💾 Committed & pushed to \`main\` | ✅ |"
             echo
-            echo "Running CI, then building the wheel/sdist and Docker image, then publishing the release once all three succeed."
+            echo "Running CI, then building the wheel/sdist and Docker image, then publishing the release, then promoting the Docker image to :latest/:${VERSION} once everything above succeeds."
           } >> "$GITHUB_STEP_SUMMARY"
 
   ci:
@@ -125,7 +137,11 @@ jobs:
       packages: write
     with:
       ref: ${{ needs.prepare-release.outputs.sha }}
-      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }},ghcr.io/afonsoc12/cookistash:latest
+      # A staging tag only, not :latest/:{version} yet - those only appear
+      # once create-release below has actually confirmed the release exists,
+      # so nothing public-facing goes live before there's a real release
+      # behind it.
+      docker_tags: ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}
 
   create-release:
     name: Create GitHub Release
@@ -149,19 +165,77 @@ jobs:
           body: ${{ needs.prepare-release.outputs.release_notes }}
           files: dist/*
 
+      - name: 🔎 Verify release exists with expected assets
+        id: verify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          TAG="${{ needs.prepare-release.outputs.tag }}"
+          ASSETS=$(gh release view "$TAG" --json assets --jq '.assets[].name')
+          echo "Assets attached to $TAG:"
+          echo "$ASSETS"
+
+          echo "$ASSETS" | grep -q '\.whl$' || { echo "::error::No .whl attached to $TAG"; exit 1; }
+          echo "$ASSETS" | grep -q '\.tar\.gz$' || { echo "::error::No sdist (.tar.gz) attached to $TAG"; exit 1; }
+
       - name: 📝 Job summary
         run: |
           TAG="${{ needs.prepare-release.outputs.tag }}"
-          VERSION="${{ needs.prepare-release.outputs.version }}"
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
 
           {
             echo "## 🚀 Release ${TAG} Published"
             echo
-            echo "Built and released - wheel/sdist and the multi-arch Docker image were already attached/pushed before this release went live."
+            echo "Wheel/sdist confirmed attached. Promoting the Docker image to :latest/:\`{version}\` next."
             echo
             echo "| Link | |"
             echo "|---|---|"
             echo "| 📦 GitHub Release | **[${TAG}](${REPO_URL}/releases/tag/${TAG})** |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  promote-image:
+    name: Promote Docker Image
+    needs: [prepare-release, build, create-release]
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: 🔨 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: 🔐 Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐳 Promote staging image to :latest/:{version}
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          STAGING="ghcr.io/afonsoc12/cookistash:build-${{ needs.prepare-release.outputs.sha }}"
+
+          # imagetools create copies the existing multi-arch manifest to new
+          # tags - no rebuild, so the promoted image is byte-identical to
+          # what CI/the release above already verified.
+          docker buildx imagetools create \
+            --tag "ghcr.io/afonsoc12/cookistash:${VERSION}" \
+            --tag ghcr.io/afonsoc12/cookistash:latest \
+            "$STAGING"
+
+      - name: 📝 Job summary
+        run: |
+          VERSION="${{ needs.prepare-release.outputs.version }}"
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+
+          {
+            echo "## 🐳 Docker Image Promoted"
+            echo
+            echo "| Link | |"
+            echo "|---|---|"
             echo "| 🐳 Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
           } >> "$GITHUB_STEP_SUMMARY"
