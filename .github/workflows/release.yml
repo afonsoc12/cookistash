@@ -135,7 +135,7 @@ jobs:
     with:
       ref: ${{ needs.prepare-release.outputs.sha }}
       # Staging tag only - promote-image below moves this to :latest/:{version}.
-      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-build-${{ needs.prepare-release.outputs.short_sha }}
+      docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-dev-${{ needs.prepare-release.outputs.short_sha }}
 
   create-release:
     name: Create GitHub Release
@@ -213,7 +213,7 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ needs.prepare-release.outputs.version }}"
-          STAGING="ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-build-${{ needs.prepare-release.outputs.short_sha }}"
+          STAGING="ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }}-dev-${{ needs.prepare-release.outputs.short_sha }}"
 
           # Copies the existing manifest to new tags - no rebuild.
           docker buildx imagetools create \
