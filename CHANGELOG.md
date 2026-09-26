@@ -7,6 +7,8 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-09-26
+
 ### Added
 
 - 🚧 Branded 400/403/404/500 error pages
@@ -44,7 +46,9 @@ and this project adheres to \[Semantic Versioning].
 
 <!-- Versions -->
 
-[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.3...HEAD
+
+[0.0.3]: https://github.com/afonsoc12/cookistash/compare/v0.0.2...v0.0.3
 
 [0.0.2]: https://github.com/afonsoc12/cookistash/compare/v0.0.1...v0.0.2
 
