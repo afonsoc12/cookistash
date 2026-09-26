@@ -7,6 +7,8 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-09-26
+
 ### Added
 
 - 🔑 Auto-create a superuser (`admin`/`admin` by default, configurable via `ADMIN_USERNAME`/`ADMIN_PASSWORD`) when `AUTO_ADMIN_LOGIN` is enabled and none exists yet, so auto-login works out of the box on first run
@@ -55,7 +57,9 @@ and this project adheres to \[Semantic Versioning].
 
 <!-- Versions -->
 
-[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.4...HEAD
+
+[0.0.4]: https://github.com/afonsoc12/cookistash/compare/v0.0.3...v0.0.4
 
 [0.0.3]: https://github.com/afonsoc12/cookistash/compare/v0.0.2...v0.0.3
 
