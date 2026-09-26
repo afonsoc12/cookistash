@@ -9,8 +9,41 @@ on:
   workflow_dispatch:
 
 jobs:
+  guard:
+    name: 🚦 Skip duplicate runs
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: 🔎 Check for a same-commit branch+tag push
+        id: check
+        run: |
+          set -euo pipefail
+
+          # prepare-release.yml pushes the version-bump commit to main and
+          # its vX.Y.Z tag together, in one atomic push - GitHub fires a
+          # separate push event per ref, so both this branch push and the
+          # tag push trigger this workflow for the identical commit. The
+          # tag-triggered run is the one that produces the real release;
+          # skip the redundant branch-triggered run before it does any work.
+          SKIP=false
+          if [[ "${{ github.event_name }}" == push && "${{ github.ref }}" == refs/heads/main ]]; then
+            if git tag --points-at HEAD | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::notice::HEAD is already tagged - skipping in favor of the tag-triggered run."
+              SKIP=true
+            fi
+          fi
+          echo "skip=$SKIP" >> $GITHUB_OUTPUT
+
   ci:
     name: 🔍 CI
+    needs: guard
+    if: needs.guard.outputs.skip != 'true'
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
@@ -18,7 +51,8 @@ jobs:
 
   meta:
     name: 🏷️ Determine release metadata
-    needs: ci
+    needs: [guard, ci]
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     outputs:
       is_release: ${{ steps.meta.outputs.is_release }}
@@ -89,7 +123,8 @@ jobs:
 
   github-release:
     name: 📦 GitHub Release
-    needs: meta
+    needs: [guard, meta]
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -141,7 +176,8 @@ jobs:
 
   build:
     name: 🐳 Build & Push Docker Image
-    needs: meta
+    needs: [guard, meta]
+    if: needs.guard.outputs.skip != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

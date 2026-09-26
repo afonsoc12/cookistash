@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Fixed
+
+- 🔧 `release.yml` no longer runs twice for the same release commit — the prepare step pushes a commit and its tag together, which fired two separate workflow runs (one per ref) doing the same build/publish work
+
 ## [0.0.3] - 2026-09-26
 
 ### Added

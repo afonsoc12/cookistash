@@ -78,6 +78,8 @@ Two-phase, no PR in between:
 
 A tag can't just be created on a PR branch and merged in - this repo only allows squash/rebase merges (`mergeCommitAllowed: false`), which rewrite commits to a new SHA, orphaning any tag pointed at the old one. Hence pushing directly to `main` instead of going through a PR.
 
+Pushing the commit and its tag together fires two separate `push` events for the same SHA (one per ref), which would otherwise run `release.yml` twice. A `guard` job at the top of `release.yml` detects this (`push` event, `refs/heads/main`, HEAD already tagged with a `vX.Y.Z` tag) and skips the redundant branch-triggered run - the tag-triggered run is the one that actually produces the release. Manual `workflow_dispatch` runs are exempt from this guard even on an already-tagged commit.
+
 `prepare-release.yml` checks out and pushes using the `RELEASE_PAT` repo secret instead of the default `GITHUB_TOKEN` - pushes authenticated with the default token can't trigger other workflow runs, so `release.yml` would never fire from the push to `main`. `RELEASE_PAT` must be a fine-grained personal access token scoped to this repository only, with **Contents: Read and write** permission (nothing else is needed - it only commits/pushes to `main` and pushes a tag).
 
 PRs that change behavior should add an entry to `CHANGELOG.md`'s `[Unreleased]` section (release.yml now fails the release if it's empty, see above) - keep entries short and human-readable, not a dump of commit messages or internal implementation detail.
