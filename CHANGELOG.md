@@ -9,6 +9,7 @@ and this project adheres to \[Semantic Versioning].
 
 ### Added
 
+- 🔑 Auto-create a superuser (`admin`/`admin` by default, configurable via `ADMIN_USERNAME`/`ADMIN_PASSWORD`) when `AUTO_ADMIN_LOGIN` is enabled and none exists yet, so auto-login works out of the box on first run
 - 🏷️ Standard OCI image labels on the Docker image (source, licenses, version, revision, created, etc.) - fixes GHCR/Renovate having no repo link for the published image
 
 ### Changed

@@ -63,7 +63,9 @@ All configuration is via environment variables (see `docker-compose.yml`).
 | `DATA_DIR` | Where persistent state is stored, so it survives container upgrades | `/data` (bind-mounted to `./tmp/docker-data/app-data`) |
 | `ALLOWED_HOSTS` | Comma-separated allowed hosts | `*` |
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated origins (with scheme) trusted for form submissions — set this if you're behind a reverse proxy | unset |
-| `AUTO_ADMIN_LOGIN` | Skip the admin login form, auto-authenticate as the superuser | `true` — **only safe on localhost/private networks**, set `false` if ever exposed |
+| `AUTO_ADMIN_LOGIN` | Skip the admin login form, auto-authenticate as the superuser. If no superuser exists yet, one is created automatically (see `ADMIN_USERNAME`/`ADMIN_PASSWORD`) | `true` — **only safe on localhost/private networks**, set `false` if ever exposed |
+| `ADMIN_USERNAME` | Username for the superuser auto-created when `AUTO_ADMIN_LOGIN` is enabled and none exists yet | `admin` |
+| `ADMIN_PASSWORD` | Password for that auto-created superuser | `admin` |
 
 You don't need to set `SECRET_KEY` yourself (see above), but if you'd rather pin one explicitly, generate a long, cryptographically random one with:
 
