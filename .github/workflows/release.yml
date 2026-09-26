@@ -103,11 +103,12 @@ jobs:
           {
             echo "## 🏷️ Release ${TAG} Prepared"
             echo
-            echo "| Step | Status |"
+            echo "| Field | Value |"
             echo "|---|---|"
-            echo "| 📌 Version bumped (\`pyproject.toml\`, \`uv.lock\`) | ✅ \`${VERSION}\` |"
-            echo "| 📝 Changelog converted (\`CHANGELOG.md\`) | ✅ \`[Unreleased]\` → \`[${VERSION}]\` |"
-            echo "| 💾 Committed & pushed to \`main\` | ✅ |"
+            echo "| Status | ✅ Success |"
+            echo "| Version | \`${VERSION}\` |"
+            echo "| Changelog | \`[Unreleased]\` → \`[${VERSION}]\` |"
+            echo "| Committed to \`main\` | ✅ |"
             echo
             echo "Running CI, then building the wheel/sdist and Docker image, then publishing the release, then promoting the Docker image to :latest/:${VERSION} once everything above succeeds."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -179,11 +180,13 @@ jobs:
           {
             echo "## 🚀 Release ${TAG} Published"
             echo
-            echo "Wheel/sdist confirmed attached. Promoting the Docker image to :latest/:\`{version}\` next."
-            echo
-            echo "| Link | |"
+            echo "| Field | Value |"
             echo "|---|---|"
-            echo "| 📦 GitHub Release | **[${TAG}](${REPO_URL}/releases/tag/${TAG})** |"
+            echo "| Status | ✅ Success |"
+            echo "| GitHub Release | [${TAG}](${REPO_URL}/releases/tag/${TAG}) |"
+            echo "| Wheel/sdist | ✅ Verified attached |"
+            echo
+            echo "Promoting the Docker image to :latest/:\`{version}\` next."
           } >> "$GITHUB_STEP_SUMMARY"
 
   promote-image:
@@ -224,7 +227,9 @@ jobs:
           {
             echo "## 🐳 Docker Image Promoted"
             echo
-            echo "| Link | |"
+            echo "| Field | Value |"
             echo "|---|---|"
-            echo "| 🐳 Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
+            echo "| Status | ✅ Success |"
+            echo "| Docker image | [\`ghcr.io/afonsoc12/cookistash:${VERSION}\`](${REPO_URL}/pkgs/container/cookistash) |"
+            echo "| Also tagged | \`:latest\` |"
           } >> "$GITHUB_STEP_SUMMARY"

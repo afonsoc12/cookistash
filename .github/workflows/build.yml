@@ -43,6 +43,18 @@ jobs:
           name: dist
           path: dist/
 
+      - name: 📝 Job summary
+        run: |
+          {
+            echo "## 🐍 Wheel & Sdist Summary"
+            echo
+            echo "| File | Size |"
+            echo "|---|---|"
+            for f in dist/*; do
+              echo "| \`$(basename "$f")\` | $(du -h "$f" | cut -f1) |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
@@ -81,13 +93,19 @@ jobs:
 
       - name: 📝 Job summary
         run: |
-          cat >> $GITHUB_STEP_SUMMARY << EOF
-          # 🐳 Docker Build Summary
-
-          ## Build Information
-          - **Status**: ✅ Success
-          - **Commit SHA**: ${{ inputs.ref }}
-
-          ## Tags
-          ${{ inputs.docker_tags }}
-          EOF
+          {
+            echo "## 🐳 Docker Build Summary"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Status | ✅ Success |"
+            echo "| Commit | \`${{ inputs.ref }}\` |"
+            echo "| Platforms | \`linux/amd64\`, \`linux/arm64\` |"
+            echo
+            echo "### Tags"
+            echo
+            IFS=',' read -ra TAGS <<< "${{ inputs.docker_tags }}"
+            for t in "${TAGS[@]}"; do
+              echo "- \`$t\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"

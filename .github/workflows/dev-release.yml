@@ -63,3 +63,28 @@ jobs:
       ref: ${{ github.sha }}
       docker_tags: ${{ needs.meta.outputs.docker_tags }}
       version_suffix: ${{ needs.meta.outputs.version_suffix }}
+
+  summary:
+    name: Summary
+    needs: [meta, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📝 Job summary
+        run: |
+          {
+            echo "## 🌙 Dev Build Summary"
+            echo
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Status | ✅ Success |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo
+            echo "### Docker Tags"
+            echo
+            IFS=',' read -ra TAGS <<< "${{ needs.meta.outputs.docker_tags }}"
+            for t in "${TAGS[@]}"; do
+              echo "- \`$t\`"
+            done
+            echo
+            echo "No GitHub release is created for dev builds - the wheel/sdist is a workflow artifact only."
+          } >> "$GITHUB_STEP_SUMMARY"
