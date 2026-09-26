@@ -134,7 +134,6 @@ class MealieClient(Session):
         recipe.mealie_slug = mealie_slug
         recipe.save()
 
-        # Update recipe
         # settings excluded: we never populate it locally (always {}), and an
         # empty dict is a harmless no-op against Mealie anyway - excluding it
         # just keeps the payload honest about what we're actually sending.

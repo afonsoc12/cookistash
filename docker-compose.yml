@@ -70,7 +70,7 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: django-db
       REDIS_CACHE_URL: redis://redis:6379/1
-      COOKIDOO_EXPLORE_URL: https://cookidoo.pt/foundation/pt-PT/explore
+      COOKIDOO_EXPLORE_URL: ${COOKIDOO_EXPLORE_URL:-https://cookidoo.pt/foundation/pt-PT/explore}
       # Persisted, mounted-volume path for runtime-generated state (right
       # now: the auto-generated SECRET_KEY, see cookistash/settings.py) that
       # must survive the container being replaced on every image upgrade -
@@ -79,11 +79,11 @@ services:
       DATA_DIR: /data
       # Optional - Mealie sync only activates once these are set. Generate
       # MEALIE_API_TOKEN in Mealie's UI (Profile > API Tokens) after first
-      # login, see README.
-      # MEALIE_API_URL: http://mealie:9000
-      # MEALIE_PUBLIC_URL: http://localhost:9000
-      # MEALIE_GROUP_SLUG: home
-      # MEALIE_API_TOKEN: ""
+      # login, see README. Values come from .env (see .env.sample).
+      MEALIE_API_URL: ${MEALIE_API_URL:-}
+      MEALIE_PUBLIC_URL: ${MEALIE_PUBLIC_URL:-}
+      MEALIE_GROUP_SLUG: ${MEALIE_GROUP_SLUG:-home}
+      MEALIE_API_TOKEN: ${MEALIE_API_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy

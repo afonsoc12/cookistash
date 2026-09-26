@@ -155,7 +155,6 @@ class CookidooClient(Session):
 
         recipe_ids = set()
 
-        # Use sort by filters
         for sort_by in (
             "relevance",
             "publishedat",
@@ -179,7 +178,6 @@ class CookidooClient(Session):
                 logger.debug(f"Found {len(processed_recipe_ids)} for filter '{order}{sort_by}'")
                 recipe_ids.update(processed_recipe_ids)
 
-        # Use multiple ratings
         for rating in range(1, 6):
             result = self.request(
                 "GET",

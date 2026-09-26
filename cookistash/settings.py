@@ -120,6 +120,10 @@ UNFOLD = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves /static/ directly from gunicorn (with far-future cache headers +
+    # gzip/brotli) - replaces nginx, which just added a second process for
+    # the same job at this traffic level.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -220,10 +224,28 @@ DATETIME_FORMAT = "N j"
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
-# Only used by `collectstatic` for the gunicorn/nginx path (docker-compose) -
-# `manage.py runserver` (local dev) serves straight from each app's static/
-# dir via django.contrib.staticfiles and never touches this.
+# Only used by `collectstatic` for the gunicorn/WhiteNoise path
+# (docker-compose) - `manage.py runserver` (local dev) serves straight from
+# each app's static/ dir via django.contrib.staticfiles and never touches
+# this.
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # Hashed filenames + far-future cache headers, gzip/brotli precompressed
+    # at collectstatic time. Manifest-based, so it requires collectstatic to
+    # have already run - unit tests never do that, so they fall back to
+    # plain static files storage (see USE_TEST_DOUBLES above).
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if USE_TEST_DOUBLES
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

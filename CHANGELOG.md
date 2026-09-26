@@ -7,6 +7,16 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Added
+
+- 🚧 Branded 400/403/404/500 error pages
+
+### Changed
+
+- 🪶 Much lighter container — nginx and always-on Flower are gone, Celery beat runs inside the worker, and Celery uses a single-process pool. Idle memory down from ~677Mi to ~200Mi.
+- ⬆️ Upgraded Django 5.2 → 6.0 (highest version django-celery-beat currently supports)
+- 🤖 Dependency tracking improvements — Renovate now checks Mealie for new versions weekly (Mondays, 8am UTC) instead of continuously
+
 ## [0.0.2] - 2026-09-25
 
 ### Fixed

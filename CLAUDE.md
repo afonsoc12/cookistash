@@ -4,7 +4,7 @@ This file provides guidance to AI agents working with code in this repository. K
 
 ## Project Overview
 
-**Cookistash** scrapes recipes from Cookidoo (Bimby/Thermomix) and optionally syncs them to a self-hosted Mealie instance. It's a single Django app (+ Celery worker/beat + Flower), packaged into one Docker image. Mealie sync is entirely optional — it only activates once a Mealie source is configured; scraping/browsing works standalone.
+**Cookistash** scrapes recipes from Cookidoo (Bimby/Thermomix) and optionally syncs them to a self-hosted Mealie instance. It's a single Django app (gunicorn + WhiteNoise) plus one Celery worker with beat baked in and a `solo` pool (`celery worker -B --pool=solo` - single process, no per-CPU-core forking, since task volume here doesn't need it), packaged into one Docker image, deliberately kept minimal (no nginx, no always-on Flower) so it fits small compute limits. Mealie sync is entirely optional — it only activates once a Mealie source is configured; scraping/browsing works standalone.
 
 Two Django apps:
 - `cookistash/cookidoo/` — scrapes Cookidoo, stores raw + parsed recipe data (`Source`, recipe models), the Explorer UI (`views.py`, `templates/`), Celery tasks for scraping (`tasks.py`).
@@ -89,6 +89,10 @@ Everything is env-var driven — see the README's Configuration table for the fu
 ## Pre-commit (`.pre-commit-config.yaml`)
 
 Local-only, not run in CI (CI runs the same checks directly, see above). Install once with `uv run pre-commit install`; every `git commit` then runs ruff format, ruff check, mypy, and the unit test suite, which fails the commit if coverage drops below 90%.
+
+## Comments
+
+Default to no comment. Only add one when the code can't explain itself — a non-obvious constraint, a workaround for a specific bug, a reason a simpler approach doesn't work. Never comment what the code already says (`# increment counter` above `counter += 1`), never leave commented-out code, never restate a docstring line-by-line. When a comment is warranted, keep it short and write it for a human who's new to the file, not future-you.
 
 ## Dependency updates
 

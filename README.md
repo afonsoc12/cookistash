@@ -21,7 +21,7 @@
 - ⏰ **Scheduled rescrapes** — nightly job (django-celery-beat, DB-backed and editable in-admin) keeps stale recipes fresh
 - 🖥️ **Explorer UI** — browse scraped recipes, see sync status, re-scrape or send-to-Mealie with one click, drill into raw scraped JSON
 - 🎨 **Modern admin** — Django admin re-themed with Unfold, task results and periodic tasks linked back to the recipe they belong to
-- 🐳 **Single container** — Django + Celery worker + Celery beat + Flower, one image, ~115 MB (Alpine + Python 3.14)
+- 🐳 **Single, lightweight container** — Django (gunicorn + WhiteNoise) + one Celery worker (with beat baked in), one image, ~115 MB (Alpine + Python 3.14)
 
 ## 🚀 Quick Start
 
@@ -33,7 +33,7 @@ This starts:
 
 | Service | Purpose | URL |
 |---|---|---|
-| `app` | Django + Celery worker + beat + Flower, fronted by nginx (supervisord) | [localhost:8000](http://localhost:8000) (UI + Admin), [localhost:8000/flower/](http://localhost:8000/flower/) (Celery/Flower) |
+| `app` | Django (gunicorn + WhiteNoise) + Celery worker/beat (supervisord) | [localhost:8000](http://localhost:8000) (UI + Admin) |
 | `postgres` | Database (separate `cookistash` and `mealie` DBs) | — |
 | `redis` | Celery broker | — |
 | `mealie` | Recipe manager (optional, for sync) | [localhost:9000](http://localhost:9000) |
@@ -86,7 +86,12 @@ Managed via django-celery-beat — DB-backed, editable at `/admin/django_celery_
 
 Multi-stage build, Alpine + Python 3.14. `psycopg2` compiles from source in the builder stage (no musllinux wheel available) and never ships in the runtime image. ~115 MB total.
 
-The `app` container runs [gunicorn](https://gunicorn.org/) (not `manage.py runserver`) behind nginx, which also serves `/static/` directly from `collectstatic` output rather than round-tripping every asset through Django:
+The `app` container runs two processes under supervisord: [gunicorn](https://gunicorn.org/) (1 worker; `manage.py runserver` is never used) serving Django directly with [WhiteNoise](http://whitenoise.evans.io/) for `/static/`, and a single Celery worker with beat baked in, running a single-process `solo` pool instead of forking a child per CPU core (`celery worker -B --pool=solo`). No nginx, no separate beat process, no per-core worker forking, no always-on Flower — kept deliberately minimal so it runs comfortably inside small resource limits (e.g. a 256Mi-512Mi Kubernetes pod). Flower is still available as an on-demand tool if you need to inspect Celery tasks:
+
+```bash
+docker compose exec app celery -A cookistash flower --port=5555
+# then visit localhost:5555 (add -p 5555:5555 to the app service to expose it)
+```
 
 ```
 ENTRYPOINT ["/entrypoint.sh"]
