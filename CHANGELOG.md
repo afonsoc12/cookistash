@@ -9,7 +9,7 @@ and this project adheres to \[Semantic Versioning].
 
 ### Changed
 
-- 🔧 Split the release pipeline: `dev-release.yml` builds a `:dev` Docker image on every push to `main` (no GitHub prerelease - nothing consumes the wheel/sdist for those), `prepare-release.yml` now builds and publishes real releases in one self-contained run, always against the exact commit it just bumped and always gated on CI passing. Fixes a duplicate-run bug, releases only appear once fully built and verified, and `:latest`/`:{version}` Docker tags don't go live until the release behind them is confirmed to exist.
+- 🔧 Reworked the release pipeline to fix duplicate runs and half-built releases going live
 
 ## [0.0.3] - 2026-09-26
 

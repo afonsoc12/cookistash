@@ -98,7 +98,7 @@ A tag can't just be created on a PR branch and merged in - this repo only allows
 
 `prepare-release.yml` also has a `concurrency: group: prepare-release` (no `cancel-in-progress`) so two accidental manual triggers queue instead of racing each other's version bump; `dev-release.yml` cancels its own in-progress run per-ref instead, since a newer commit's dev build makes an older one moot.
 
-PRs that change behavior should add an entry to `CHANGELOG.md`'s `[Unreleased]` section - `prepare-release.yml`'s changelog-bump step has a `fail-on-empty-release-notes` guard, so an empty section blocks cutting a release. Keep entries short and human-readable, not a dump of commit messages or internal implementation detail.
+PRs that change behavior should add an entry to `CHANGELOG.md`'s `[Unreleased]` section - `prepare-release.yml`'s changelog-bump step has a `fail-on-empty-release-notes` guard, so an empty section blocks cutting a release. Keep entries to one line each, plain and human-readable - what changed and why it matters to someone running the app, not a dump of commit messages, internal implementation detail, or a design-doc-length explanation of how it was fixed.
 
 ## Configuration
 
