@@ -90,6 +90,10 @@ Everything is env-var driven — see the README's Configuration table for the fu
 
 Local-only, not run in CI (CI runs the same checks directly, see above). Install once with `uv run pre-commit install`; every `git commit` then runs ruff format, ruff check, mypy, and the unit test suite, which fails the commit if coverage drops below 90%.
 
+## Comments
+
+Default to no comment. Only add one when the code can't explain itself — a non-obvious constraint, a workaround for a specific bug, a reason a simpler approach doesn't work. Never comment what the code already says (`# increment counter` above `counter += 1`), never leave commented-out code, never restate a docstring line-by-line. When a comment is warranted, keep it short and write it for a human who's new to the file, not future-you.
+
 ## Dependency updates
 
 Renovate is enabled (`renovate.json`, `config:recommended` preset) — PRs are labeled `renovate`.

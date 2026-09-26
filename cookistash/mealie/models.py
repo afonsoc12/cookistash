@@ -26,10 +26,8 @@ class ModelMealieApi(models.Model):
         - Filters only valid model fields.
         """
 
-        # Convert keys to snake_case
         snake_data = {camel_to_snake(k): v for k, v in data.items()}
 
-        # Keep only valid model fields
         valid_fields = {f.name for f in cls._meta.get_fields()}
 
         defaults = {k: v for k, v in snake_data.items() if k in valid_fields}
@@ -269,39 +267,30 @@ class Recipe(ModelMealieApi):
     )
     last_synced_at = models.DateTimeField(null=True, blank=True, editable=False)
 
-    # user_id = models.CharField(max_length=255, blank=True, null=True)
-    # household_id = models.CharField(max_length=255, blank=True, null=True)
-    # group_id = models.CharField(max_length=255, blank=True, null=True)
     name = models.CharField(max_length=255)
     image_url = models.URLField()
     description = models.TextField(blank=True, null=True)
     rating = models.PositiveIntegerField(default=None, null=True, blank=True)
     org_url = models.URLField()
 
-    # Yields
     recipe_servings = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True)
     recipe_yield_quantity = models.DecimalField(max_digits=5, decimal_places=1, blank=True, null=True)
     recipe_yield = models.CharField(max_length=255, blank=True, null=True)
 
-    # Times
     total_time = models.CharField(max_length=255, blank=True, null=True)
     prep_time = models.CharField(max_length=255, blank=True, null=True)
     perform_time = models.CharField(max_length=255, blank=True, null=True)  # cook time
 
-    # Dependencies
     nutrition = models.JSONField(default=dict, blank=True)
     recipe_category = models.JSONField(default=list, blank=True)
     tags = models.JSONField(default=list, blank=True)
     tools = models.JSONField(default=list, blank=True)
     recipe_ingredient = models.ManyToManyField(Ingredient, null=True, blank=True)
     # Real instructions come from the related Instruction model + the
-    # explicit payload["recipeInstructions"] build in client.py - this JSON
-    # field would only ever duplicate/shadow that, so it was removed.
-
-    # assets = models.JSONField(default=list, blank=True)
+    # explicit payload["recipeInstructions"] build in client.py - a JSON
+    # field here would only ever duplicate/shadow that.
     notes = models.JSONField(default=list, blank=True)
     extras = models.JSONField(default=dict, blank=True)
-    # comments = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"{self.name} ({self.scraped_recipe.recipe_id})"

@@ -77,7 +77,6 @@ class MealieTransformer:
     def transform(self, scrape: ScrapedRecipe) -> MealieRecipe:
         data = scrape.raw_data
 
-        # Flatten ingredient groups
         ingredient_groups = []
         for group in data["recipeIngredientGroups"]:
             title = group["title"]
@@ -129,18 +128,12 @@ class MealieTransformer:
                 image_url=data["descriptiveAssets"][0]["landscape"].format(
                     transformation="t_web_rdp_recipe_584x480_1_5x"
                 ),
-                # description=
-                # rating=
                 org_url=scrape.url,
-                # Yields
                 recipe_servings=data["servingSize"]["quantity"]["value"],
                 recipe_yield_quantity=data["servingSize"]["quantity"]["value"],
                 recipe_yield=data["servingSize"]["unitNotation"],
-                # Times
                 total_time=total_time_parsed,
                 prep_time=prep_time_parsed,
-                # perform_time =
-                # Taxonomy
                 recipe_category=[{"name": c["title"]} for c in data.get("categories", []) if c.get("title")],
                 tags=[{"name": t["name"]} for t in data.get("tags", []) if t.get("name")],
                 tools=[
@@ -161,7 +154,6 @@ class MealieTransformer:
             ),
         )
 
-        # todo fix recipe ingredients
         mealie_recipe.recipe_ingredient.all().delete()
         mealie_recipe.recipe_ingredient.add(*ingredients)
         mealie_recipe.save()

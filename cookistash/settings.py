@@ -235,9 +235,15 @@ STORAGES = {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     # Hashed filenames + far-future cache headers, gzip/brotli precompressed
-    # at collectstatic time - what nginx's static block used to do.
+    # at collectstatic time. Manifest-based, so it requires collectstatic to
+    # have already run - unit tests never do that, so they fall back to
+    # plain static files storage (see USE_TEST_DOUBLES above).
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if USE_TEST_DOUBLES
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 

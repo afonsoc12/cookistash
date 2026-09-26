@@ -260,7 +260,6 @@ class RecipeAdmin(ModelAdmin):
         for msg in failed:
             self.message_user(request, msg, level=messages.ERROR)
 
-    # Add custom URL to handle scrape form
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
