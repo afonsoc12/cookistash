@@ -1,4 +1,4 @@
-name: 🔍 CI
+name: CI
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +17,7 @@ on:
 
 jobs:
   ci:
-    name: 🔍 CI
+    name: CI
     runs-on: ubuntu-latest
     permissions:
       contents: read

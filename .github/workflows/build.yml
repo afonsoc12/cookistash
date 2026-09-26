@@ -1,4 +1,4 @@
-name: 🏗️ Build
+name: Build
 
 # Shared by canary.yml and prepare-release.yml. Builds exactly what's checked
 # out at `ref` - no `uv version` mutation for real releases, so the artifacts
@@ -22,7 +22,7 @@ on:
 
 jobs:
   wheels:
-    name: 🐍 Build wheel + sdist
+    name: Build wheel + sdist
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout
@@ -47,7 +47,7 @@ jobs:
           path: dist/
 
   docker:
-    name: 🐳 Build & Push Docker Image
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:

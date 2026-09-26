@@ -1,4 +1,4 @@
-name: 🐦 Canary
+name: Canary
 
 # Continuous unstable build on every push to main - real releases are handled
 # entirely by prepare-release.yml instead (see CLAUDE.md).
@@ -15,14 +15,14 @@ on:
 
 jobs:
   ci:
-    name: 🔍 CI
+    name: CI
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
       id-token: write
 
   meta:
-    name: 🏷️ Determine canary build metadata
+    name: Determine canary build metadata
     needs: ci
     runs-on: ubuntu-latest
     outputs:
@@ -56,7 +56,7 @@ jobs:
           echo "version_suffix=+dev.${SHORT_SHA}" >> $GITHUB_OUTPUT
 
   build:
-    name: 🏗️ Build
+    name: Build
     needs: meta
     uses: ./.github/workflows/build.yml
     permissions:
@@ -68,7 +68,7 @@ jobs:
       version_suffix: ${{ needs.meta.outputs.version_suffix }}
 
   github-release:
-    name: 📦 GitHub Prerelease
+    name: GitHub Prerelease
     needs: [meta, build]
     runs-on: ubuntu-latest
     permissions:

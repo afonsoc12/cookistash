@@ -1,4 +1,4 @@
-name: 🏷️ Prepare Release
+name: Prepare Release
 
 concurrency:
   group: prepare-release
@@ -18,7 +18,7 @@ on:
 
 jobs:
   prepare-release:
-    name: 🏷️ Prepare Release
+    name: Prepare Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -107,7 +107,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   ci:
-    name: 🔍 CI
+    name: CI
     needs: prepare-release
     uses: ./.github/workflows/ci.yml
     permissions:
@@ -117,7 +117,7 @@ jobs:
       ref: ${{ needs.prepare-release.outputs.sha }}
 
   build:
-    name: 🏗️ Build
+    name: Build
     needs: [prepare-release, ci]
     uses: ./.github/workflows/build.yml
     permissions:
@@ -128,7 +128,7 @@ jobs:
       docker_tags: ghcr.io/afonsoc12/cookistash:${{ needs.prepare-release.outputs.version }},ghcr.io/afonsoc12/cookistash:latest
 
   create-release:
-    name: 📦 Create GitHub Release
+    name: Create GitHub Release
     needs: [prepare-release, build]
     runs-on: ubuntu-latest
     permissions:
