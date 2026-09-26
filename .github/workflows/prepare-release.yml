@@ -33,8 +33,6 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          # Same RELEASE_PAT used for every other automation push to main - see CLAUDE.md.
-          token: ${{ secrets.RELEASE_PAT }}
 
       - name: ⚡ Setup uv
         uses: astral-sh/setup-uv@v10.2.0

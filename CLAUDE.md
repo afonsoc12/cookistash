@@ -94,7 +94,7 @@ Three files, two independent pipelines that happen to share the actual build ste
 
 A tag can't just be created on a PR branch and merged in - this repo only allows squash/rebase merges (`mergeCommitAllowed: false`), which rewrite commits to a new SHA, orphaning any tag pointed at the old one. Hence pushing directly to `main` instead of going through a PR.
 
-`prepare-release.yml` checks out and pushes using the `RELEASE_PAT` repo secret instead of the default `GITHUB_TOKEN`, matching every other automation-pushed commit to `main` in this repo - not because this specific push needs to trigger anything (`[skip ci]` ensures it doesn't). The final release-creation step uses the default `GITHUB_TOKEN` instead, since nothing needs to react to a release being published anymore. `RELEASE_PAT` must be a fine-grained personal access token scoped to this repository only, with **Contents: Read and write** permission.
+`prepare-release.yml` uses the default `GITHUB_TOKEN` throughout, including for the push to `main` - `main` has no branch protection, and this push doesn't need to trigger anything else (the actual build/release happens via `needs:` job dependencies in this same run, not by anything reacting to the push). No PAT is required anywhere in this pipeline anymore.
 
 `prepare-release.yml` also has a `concurrency: group: prepare-release` (no `cancel-in-progress`) so two accidental manual triggers queue instead of racing each other's version bump; `dev-release.yml` cancels its own in-progress run per-ref instead, since a newer commit's dev build makes an older one moot.
 
