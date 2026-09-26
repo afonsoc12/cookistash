@@ -1,4 +1,3 @@
-# ── builder ──────────────────────────────────────────────────────────────────
 # Alpine has no prebuilt (musllinux) wheel for psycopg2-binary, so it compiles
 # from source here - these build deps never make it into the runtime image.
 FROM ghcr.io/astral-sh/uv:python3.14-alpine AS builder
@@ -12,20 +11,14 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY . .
 RUN uv sync --locked --no-dev
 
-# ── runtime ──────────────────────────────────────────────────────────────────
 FROM python:3.14-alpine
 
-# Passed via --build-arg from build.yml so each pushed image carries its
-# real version/commit/date - default to "n/a" so a plain `docker build .`
-# (no build-args) still produces a valid, non-empty label rather than an
-# empty string.
+# Passed via --build-arg from build.yml; "n/a" default covers a plain `docker build .`.
 ARG VERSION=n/a
 ARG REVISION=n/a
 ARG BUILD_DATE=n/a
 
-# OCI standard labels (https://github.com/opencontainers/image-spec/blob/main/annotations.md) -
-# org.opencontainers.image.source in particular is what tools like Renovate
-# and GHCR's own UI read to link an image back to this repo.
+# OCI standard labels: https://github.com/opencontainers/image-spec/blob/main/annotations.md
 LABEL org.opencontainers.image.title="Cookistash" \
     org.opencontainers.image.description="🥘 Stash your Cookidoo recipes and sync them to Mealie." \
     org.opencontainers.image.source="https://github.com/afonsoc12/cookistash" \

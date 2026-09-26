@@ -1,7 +1,7 @@
 name: Build
 
-# Shared by dev-release.yml and release.yml. Builds `ref` as-is - no
-# `uv version` mutation, except version_suffix for dev builds.
+# Shared by dev-release.yml and release.yml. Builds `ref` as-is - no `uv version`
+# mutation, except version_suffix for dev builds.
 
 on:
   workflow_call:
