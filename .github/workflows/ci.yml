@@ -89,7 +89,7 @@ jobs:
           set -euo pipefail
 
           PCT="$(uv run coverage report --format=total 2>/dev/null)"
-          THRESHOLD=90
+          THRESHOLD="$(uv run python -c 'import tomllib; print(int(tomllib.load(open("pyproject.toml", "rb"))["tool"]["coverage"]["report"]["fail_under"]))')"
           ARTIFACT_URL="${{ steps.upload-coverage.outputs.artifact-url }}"
           CODECOV_URL="https://codecov.io/gh/${{ github.repository }}/commit/${{ github.sha }}"
           echo "PCT=$PCT"
