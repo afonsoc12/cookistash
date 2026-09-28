@@ -28,7 +28,7 @@ def mealie_client(source):
 
 
 def _duplicate_key_error(existing_item):
-    response = MagicMock()
+    response = MagicMock(status_code=409)
     response.json.return_value = {"detail": {"exception": "duplicate key value violates unique constraint"}}
     error = HTTPError(response=response)
     return error
@@ -113,13 +113,34 @@ class TestCreateFood:
         assert result["id"] == existing_id
         assert str(food.mealie_id) == existing_id
 
-    def test_non_duplicate_http_error_reraises(self, mealie_client):
+    def test_non_409_http_error_reraises(self, mealie_client):
         food = Food.objects.create(name="Salt")
-        response = MagicMock()
+        response = MagicMock(status_code=500)
         response.json.return_value = {"detail": {"exception": "something else broke"}}
         with patch.object(mealie_client, "_request", side_effect=HTTPError(response=response)):
             with pytest.raises(HTTPError):
                 mealie_client.create_food(food)
+
+    def test_sqlite_style_conflict_falls_back_to_name_search(self, mealie_client):
+        # SQLite's IntegrityError message ("UNIQUE constraint failed: ...")
+        # differs from Postgres' ("duplicate key ..."), but both surface as a
+        # 409 - the fallback must key off the status code, not the wording.
+        food = Food.objects.create(name="Salt")
+        existing_id = str(uuid4())
+        response = MagicMock(status_code=409)
+        response.json.return_value = {
+            "detail": {"exception": "UNIQUE constraint failed: ingredient_foods.name, ingredient_foods.group_id"}
+        }
+        with patch.object(mealie_client, "_request") as mock_request:
+            mock_request.side_effect = [
+                HTTPError(response=response),
+                MagicMock(json=lambda: {"items": [{"id": existing_id, "name": "Salt"}]}),
+            ]
+            result = mealie_client.create_food(food)
+
+        food.refresh_from_db()
+        assert result["id"] == existing_id
+        assert str(food.mealie_id) == existing_id
 
     def test_matching_mealie_id_does_not_resave(self, mealie_client):
         existing_id = uuid4()
