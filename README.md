@@ -9,13 +9,13 @@
 [![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=Version&color=green&logo=git&logoColor=white&style=for-the-badge)](https://github.com/afonsoc12/cookistash/releases/latest)
 [![License](https://img.shields.io/github/license/afonsoc12/cookistash?label=License&color=blue&style=for-the-badge)](./LICENSE)
 
-🥘 Stash your Cookidoo recipes and sync them to Mealie.
+<p align="center"><strong style="font-size: 1.2em;">🥘 Stash your Cookidoo recipes and sync them to Mealie.</strong></p>
 
 **Cookistash** is a Cookidoo recipe explorer and scraper, with an option to send to [Mealie](https://mealie.io/) (no Mealie instance required).
 
 ## ✨ Features
 
-- 🔎 **Scrape by ID or link** — paste a Cookidoo recipe URL or ID, get back parsed ingredients, instructions, nutrition, categories, tags and tools
+- 🧭 **Discover or paste a link/ID** — browse Cookidoo's own catalog and import recipes without needing an ID first, or paste a Cookidoo recipe URL/ID to get back parsed ingredients, instructions, nutrition, categories, tags and tools
 - 🔗 **Optional Mealie sync** — push any scraped recipe to a self-hosted Mealie instance; only active once configured, never required
 - 🧠 **Correctly-split ingredients** — quantity/unit/food built from Cookidoo's own structured data, not Mealie's English-oriented NLP parser (which mis-segments non-English units with high confidence)
 - ♻️ **Idempotent sync** — re-sending an unchanged recipe is a no-op (content-hash based), so scheduled rescrapes don't hammer Mealie's API for nothing
