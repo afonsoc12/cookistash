@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Changed
+
+- 📝 README improved
+
 ## [0.0.4] - 2026-09-26
 
 ### Added
