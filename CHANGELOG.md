@@ -7,6 +7,8 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-09-28
+
 ### Changed
 
 - 📝 README improved
@@ -61,7 +63,9 @@ and this project adheres to \[Semantic Versioning].
 
 <!-- Versions -->
 
-[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.5...HEAD
+
+[0.0.5]: https://github.com/afonsoc12/cookistash/compare/v0.0.4...v0.0.5
 
 [0.0.4]: https://github.com/afonsoc12/cookistash/compare/v0.0.3...v0.0.4
 
