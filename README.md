@@ -2,7 +2,7 @@
   <img src="cookistash/cookidoo/static/cookidoo/img/icon.png" alt="Cookistash" width="140">
 </p>
 
-# Cookistash
+<h1 align="center">Cookistash</h1>
 
 <p align="center"><strong style="font-size: 1.2em;">🥘 Stash your Cookidoo recipes and sync them to Mealie.</strong></p>
 
@@ -47,7 +47,7 @@ Migrations run automatically the first time the app container starts.
 
 ### First-time setup
 
-1. Set `COOKIDOO_EXPLORE_URL` (see [Configuration](#-configuration)) and restart — the Cookidoo source is set up automatically, no admin step needed.
+1. Set `COOKIDOO_EXPLORE_URL` (see [Configuration](#configuration)) and restart — the Cookidoo source is set up automatically, no admin step needed.
 2. *(Optional)* To enable Mealie sync: log into Mealie with the default admin (`changeme@example.com` / `MyPassword`), change the password, generate an API token (Profile → API Tokens), then set `MEALIE_API_URL`/`MEALIE_API_TOKEN` and restart.
 3. Use the UI to scrape a recipe by ID or pasted link, or browse **Discover**. **Send to Mealie** only appears once a Mealie source is configured.
 
