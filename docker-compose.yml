@@ -55,7 +55,6 @@ services:
 
   cookistash:
     image: ghcr.io/afonsoc12/cookistash:latest
-    build: .
     container_name: cookistash
     ports:
       - "8000:8000"
