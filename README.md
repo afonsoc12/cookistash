@@ -85,7 +85,7 @@ The Explorer lists everything you've scraped along with its sync status. Click a
 - **↻ Re-scrape** — fetch the latest version from Cookidoo
 - **→ Send to Mealie** — push the latest scrape to Mealie (only shown once Mealie is configured)
 
-Recipes are also rescraped automatically every night to catch any changes on Cookidoo's side — no action needed.
+A nightly job keeps everything fresh automatically.
 
 ## 🗺️ Roadmap
 
