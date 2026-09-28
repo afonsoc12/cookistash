@@ -28,7 +28,7 @@
 
 ## 🚀 Installation
 
-Cookistash needs a Postgres database and a Redis instance to run. The included `docker-compose.yml` sets up everything for you — app, database, cache, and (optionally) Mealie itself — in one command:
+You need Docker. Postgres and Redis each run as their own container, defined alongside the app in the same `docker-compose.yml`.
 
 ```bash
 docker compose up -d
