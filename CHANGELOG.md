@@ -7,6 +7,8 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-09-28
+
 ### Fixed
 
 - 🐛 Fixes #39 - Mealie sync crashed importing a second recipe on SQLite-backed Mealie instances
@@ -67,7 +69,9 @@ and this project adheres to \[Semantic Versioning].
 
 <!-- Versions -->
 
-[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/afonsoc12/cookistash/compare/v0.0.6...HEAD
+
+[0.0.6]: https://github.com/afonsoc12/cookistash/compare/v0.0.5...v0.0.6
 
 [0.0.5]: https://github.com/afonsoc12/cookistash/compare/v0.0.4...v0.0.5
 
