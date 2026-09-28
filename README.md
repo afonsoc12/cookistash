@@ -4,12 +4,14 @@
 
 # Cookistash
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white&style=for-the-badge)](https://github.com/afonsoc12/cookistash/actions/workflows/release.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=Coverage&logo=codecov&logoColor=white&style=for-the-badge)](https://codecov.io/gh/afonsoc12/cookistash)
-[![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=Version&color=green&logo=git&logoColor=white&style=for-the-badge)](https://github.com/afonsoc12/cookistash/releases/latest)
-[![License](https://img.shields.io/github/license/afonsoc12/cookistash?label=License&color=blue&style=for-the-badge)](./LICENSE)
-
 <p align="center"><strong style="font-size: 1.2em;">🥘 Stash your Cookidoo recipes and sync them to Mealie.</strong></p>
+
+<p align="center">
+  <a href="https://github.com/afonsoc12/cookistash/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white&style=for-the-badge" alt="Build"></a>
+  <a href="https://codecov.io/gh/afonsoc12/cookistash"><img src="https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=Coverage&logo=codecov&logoColor=white&style=for-the-badge" alt="Coverage"></a>
+  <a href="https://github.com/afonsoc12/cookistash/releases/latest"><img src="https://img.shields.io/github/v/release/afonsoc12/cookistash?label=Version&color=green&logo=git&logoColor=white&style=for-the-badge" alt="Version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/afonsoc12/cookistash?label=License&color=blue&style=for-the-badge" alt="License"></a>
+</p>
 
 **Cookistash** is a Cookidoo recipe explorer and scraper, with an option to send to [Mealie](https://mealie.io/) (no Mealie instance required).
 
