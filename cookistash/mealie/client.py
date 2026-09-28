@@ -66,7 +66,7 @@ class MealieClient(Session):
         try:
             result = self._request("POST", "foods", json=food.to_api_data()).json()
         except HTTPError as e:
-            if "duplicate key" not in e.response.json()["detail"]["exception"]:
+            if e.response.status_code != 409:
                 raise
             result = self._find_by_name("foods", food.name)
         if result and str(food.mealie_id) != result["id"]:
@@ -78,7 +78,7 @@ class MealieClient(Session):
         try:
             result = self._request("POST", "units", json=unit.to_api_data()).json()
         except HTTPError as e:
-            if "duplicate key" not in e.response.json()["detail"]["exception"]:
+            if e.response.status_code != 409:
                 raise
             result = self._find_by_name("units", unit.name)
         if result and str(unit.mealie_id) != result["id"]:

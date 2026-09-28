@@ -7,6 +7,10 @@ and this project adheres to \[Semantic Versioning].
 
 ## [Unreleased]
 
+### Fixed
+
+- 🐛 Fixes #39 - Mealie sync crashed importing a second recipe on SQLite-backed Mealie instances
+
 ## [0.0.5] - 2026-09-28
 
 ### Changed
