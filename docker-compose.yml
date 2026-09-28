@@ -53,9 +53,9 @@ services:
       postgres:
         condition: service_healthy
 
-  app:
-    build: .
-    container_name: cookistash_app
+  cookistash:
+    image: ghcr.io/afonsoc12/cookistash:latest
+    container_name: cookistash
     ports:
       - "8000:8000"
     environment:

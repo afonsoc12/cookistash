@@ -2,19 +2,22 @@
   <img src="cookistash/cookidoo/static/cookidoo/img/icon.png" alt="Cookistash" width="140">
 </p>
 
-# Cookistash
+<h1 align="center">Cookistash</h1>
 
-[![Build](https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white)](https://github.com/afonsoc12/cookistash/actions/workflows/release.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=coverage&logo=codecov&logoColor=white)](https://codecov.io/gh/afonsoc12/cookistash)
-[![Version](https://img.shields.io/github/v/release/afonsoc12/cookistash?label=version&color=green&logo=git&logoColor=white)](https://github.com/afonsoc12/cookistash/releases/latest)
+<p align="center"><strong style="font-size: 1.2em;">🥘 Stash your Cookidoo recipes and sync them to Mealie.</strong></p>
 
-> 🥘 Scrapes recipes from [Cookidoo](https://cookidoo.thermomix.com/) (Bimby/Thermomix) — with optional sync to [Mealie](https://mealie.io/).
+<p align="center">
+  <a href="https://github.com/afonsoc12/cookistash/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/afonsoc12/cookistash/release.yml?label=Build&logo=githubactions&logoColor=white&style=for-the-badge" alt="Build"></a>
+  <a href="https://codecov.io/gh/afonsoc12/cookistash"><img src="https://img.shields.io/codecov/c/github/afonsoc12/cookistash?label=Coverage&logo=codecov&logoColor=white&style=for-the-badge" alt="Coverage"></a>
+  <a href="https://github.com/afonsoc12/cookistash/releases/latest"><img src="https://img.shields.io/github/v/release/afonsoc12/cookistash?label=Version&color=green&logo=git&logoColor=white&style=for-the-badge" alt="Version"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/github/license/afonsoc12/cookistash?label=License&color=blue&style=for-the-badge" alt="License"></a>
+</p>
 
-**Cookistash** is a Cookidoo recipe scraper first. Sending recipes to Mealie is an addon that only switches on once you configure a Mealie source — no Mealie instance required to just scrape and keep recipes.
+**Cookistash** is a Cookidoo recipe explorer and scraper, with an option to send to [Mealie](https://mealie.io/) (no Mealie instance required).
 
 ## ✨ Features
 
-- 🔎 **Scrape by ID or link** — paste a Cookidoo recipe URL or ID, get back parsed ingredients, instructions, nutrition, categories, tags and tools
+- 🧭 **Discover or paste a link/ID** — browse Cookidoo's own catalog and import recipes without needing an ID first, or paste a Cookidoo recipe URL/ID to get back parsed ingredients, instructions, nutrition, categories, tags and tools
 - 🔗 **Optional Mealie sync** — push any scraped recipe to a self-hosted Mealie instance; only active once configured, never required
 - 🧠 **Correctly-split ingredients** — quantity/unit/food built from Cookidoo's own structured data, not Mealie's English-oriented NLP parser (which mis-segments non-English units with high confidence)
 - ♻️ **Idempotent sync** — re-sending an unchanged recipe is a no-op (content-hash based), so scheduled rescrapes don't hammer Mealie's API for nothing
@@ -23,32 +26,34 @@
 - 🎨 **Modern admin** — Django admin re-themed with Unfold, task results and periodic tasks linked back to the recipe they belong to
 - 🐳 **Single, lightweight container** — one small image (~115 MB), runs comfortably on modest hardware
 
-## 🚀 Quick Start
+## 🚀 Installation
+
+You need Docker. Postgres and Redis each run as their own container, defined alongside the app in the same `docker-compose.yml`.
 
 ```bash
-docker compose up --build -d
+docker compose up -d
 ```
 
-This starts:
+Once it's up:
 
-| Service | Purpose | URL |
+| Service | What it's for | URL |
 |---|---|---|
-| `app` | The web app + background worker | [localhost:8000](http://localhost:8000) (UI + Admin) |
+| `cookistash` | The web app + background worker | [localhost:8000](http://localhost:8000) (UI + Admin) |
 | `postgres` | Database (separate `cookistash` and `mealie` DBs) | — |
 | `redis` | Celery broker | — |
 | `mealie` | Recipe manager (optional, for sync) | [localhost:9000](http://localhost:9000) |
 
-Migrations run automatically on container start.
+Migrations run automatically the first time the app container starts.
 
 ### First-time setup
 
-1. Set `COOKIDOO_EXPLORE_URL` (see below) and restart — the Cookidoo source is set up automatically, no admin step needed.
-2. *(Optional)* To enable Mealie sync: log into Mealie with the default admin (`changeme@example.com` / `MyPassword`), change the password, generate an API token (Profile → API Tokens), then set `MEALIE_API_URL`/`MEALIE_API_TOKEN` (see below) and restart.
+1. Set `COOKIDOO_EXPLORE_URL` (see [Configuration](#configuration)) and restart — the Cookidoo source is set up automatically, no admin step needed.
+2. *(Optional)* To enable Mealie sync: log into Mealie with the default admin (`changeme@example.com` / `MyPassword`), change the password, generate an API token (Profile → API Tokens), then set `MEALIE_API_URL`/`MEALIE_API_TOKEN` and restart.
 3. Use the UI to scrape a recipe by ID or pasted link, or browse **Discover**. **Send to Mealie** only appears once a Mealie source is configured.
 
 ## ⚙️ Configuration
 
-All configuration is via environment variables (see `docker-compose.yml`).
+Everything is configured through environment variables in `docker-compose.yml`.
 
 | Variable | Description | Default |
 |---|---|---|
@@ -67,18 +72,20 @@ All configuration is via environment variables (see `docker-compose.yml`).
 | `ADMIN_USERNAME` | Username for the superuser auto-created when `AUTO_ADMIN_LOGIN` is enabled and none exists yet | `admin` |
 | `ADMIN_PASSWORD` | Password for that auto-created superuser | `admin` |
 
-You don't need to set `SECRET_KEY` yourself (see above), but if you'd rather pin one explicitly, generate a long, cryptographically random one with:
+If you'd rather set `SECRET_KEY` explicitly instead of letting it auto-generate, create one with:
 
 ```bash
 openssl rand -hex 64
 ```
 
-## 🖥️ UI
+## 🖥️ Using Cookistash
 
-Lists scraped recipes with their scrape/sync status. Click a recipe for parsed ingredients, instructions, nutrition, categories/tags/tools, and the raw scraped JSON. Each row has:
+The Explorer lists everything you've scraped along with its sync status. Click a recipe to see its parsed ingredients, instructions, nutrition, categories/tags/tools, and the raw scraped data. Each recipe has two actions:
 
-- **↻ Re-scrape** — re-fetches the recipe from Cookidoo
-- **→ Send to Mealie** — transforms the latest scrape and pushes it to Mealie (only shown when Mealie is configured)
+- **↻ Re-scrape** — fetch the latest version from Cookidoo
+- **→ Send to Mealie** — push the latest scrape to Mealie (only shown once Mealie is configured)
+
+A nightly job keeps everything fresh automatically.
 
 ## 🗺️ Roadmap
 

@@ -21,7 +21,9 @@ uv sync --locked --all-groups
 # --- Running it ---
 
 # Full stack via Docker - closest to how it actually runs, but no hot reload
-docker compose up --build -d
+# docker-compose.yml alone pulls the published image; the -f override builds
+# from local source instead, for testing changes before they're released.
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
 
 # Django's dev server against dockerized Postgres/Redis - hot reload, faster Python/template iteration
 docker compose up -d postgres redis   # just the backing services
