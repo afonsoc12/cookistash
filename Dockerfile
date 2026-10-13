@@ -11,7 +11,7 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY . .
 RUN uv sync --locked --no-dev
 
-FROM python:3.14-alpine
+FROM python:3.15-alpine
 
 # Passed via --build-arg from build.yml; "n/a" default covers a plain `docker build .`.
 ARG VERSION=n/a
