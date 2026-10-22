@@ -28,7 +28,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.2
 
       - name: 🏷️ Apply local version suffix
         if: inputs.version_suffix != ''
@@ -69,7 +69,7 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: ⚡ Setup uv
-        uses: astral-sh/setup-uv@v10.2.0
+        uses: astral-sh/setup-uv@v10.3.2
 
       - name: 🏷️ Resolve OCI label values
         id: labels
