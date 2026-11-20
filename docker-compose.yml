@@ -1,7 +1,7 @@
 services:
 
   postgres:
-    image: postgres:18-trixie
+    image: postgres:19-trixie
     container_name: postgres
     ports:
       - "5432:5432"
